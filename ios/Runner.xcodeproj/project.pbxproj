@@ -16,6 +16,9 @@
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
 		B4525F397987EE1D876F1463 /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 057118157B0FDFAAF96714F0 /* Pods_Runner.framework */; };
+		DE9C4CBF2D8B04BB00BB3D07 /* ARKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DE9C4CBE2D8B04BB00BB3D07 /* ARKit.framework */; };
+		DE9C4CC12D8B04CB00BB3D07 /* RealityKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DE9C4CC02D8B04CB00BB3D07 /* RealityKit.framework */; };
+		DE9C4CC32D8B04D000BB3D07 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DE9C4CC22D8B04D000BB3D07 /* UIKit.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -65,6 +68,9 @@
 		97C147001CF9000F007C117D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		DC9E3D2A5E0C3317F6D0F067 /* Pods-RunnerTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.release.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.release.xcconfig"; sourceTree = "<group>"; };
+		DE9C4CBE2D8B04BB00BB3D07 /* ARKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ARKit.framework; path = System/Library/Frameworks/ARKit.framework; sourceTree = SDKROOT; };
+		DE9C4CC02D8B04CB00BB3D07 /* RealityKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = RealityKit.framework; path = System/Library/Frameworks/RealityKit.framework; sourceTree = SDKROOT; };
+		DE9C4CC22D8B04D000BB3D07 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -80,6 +86,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DE9C4CC12D8B04CB00BB3D07 /* RealityKit.framework in Frameworks */,
+				DE9C4CC32D8B04D000BB3D07 /* UIKit.framework in Frameworks */,
+				DE9C4CBF2D8B04BB00BB3D07 /* ARKit.framework in Frameworks */,
 				B4525F397987EE1D876F1463 /* Pods_Runner.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -90,6 +99,9 @@
 		1DBFEE7F404336B67A73F845 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				DE9C4CC22D8B04D000BB3D07 /* UIKit.framework */,
+				DE9C4CC02D8B04CB00BB3D07 /* RealityKit.framework */,
+				DE9C4CBE2D8B04BB00BB3D07 /* ARKit.framework */,
 				057118157B0FDFAAF96714F0 /* Pods_Runner.framework */,
 				4A14824C7006D0CF620884B9 /* Pods_RunnerTests.framework */,
 			);
@@ -161,7 +173,6 @@
 				DC9E3D2A5E0C3317F6D0F067 /* Pods-RunnerTests.release.xcconfig */,
 				3DE0E3A00CE2EB077D22B8D5 /* Pods-RunnerTests.profile.xcconfig */,
 			);
-			name = Pods;
 			path = Pods;
 			sourceTree = "<group>";
 		};
@@ -471,9 +482,10 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
-				DEVELOPMENT_TEAM = S8MFP28V83;
+				DEVELOPMENT_TEAM = CNX8TKHFJ4;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -654,9 +666,10 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
-				DEVELOPMENT_TEAM = S8MFP28V83;
+				DEVELOPMENT_TEAM = CNX8TKHFJ4;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -677,9 +690,10 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
-				DEVELOPMENT_TEAM = S8MFP28V83;
+				DEVELOPMENT_TEAM = CNX8TKHFJ4;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
