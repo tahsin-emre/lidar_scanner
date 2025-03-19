@@ -14,6 +14,7 @@ dependencies:
   equatable: ^2.0.7
   get_it: ^7.6.7
   injectable: ^2.3.2
+  permission_handler: ^11.4.0
 
 
 dev_dependencies:
