@@ -13,7 +13,25 @@ class _ScannerViewState extends State<ScannerView> with ScannerMixin {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Scanner')),
-      body: const Center(child: Text('Scanner')),
+      body: const _Body(),
+    );
+  }
+}
+
+final class _Body extends StatelessWidget {
+  const _Body();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        UiKitView(
+          viewType: 'com.example.lidarScanner',
+          onPlatformViewCreated: (int id) {
+            // Platform view created callback
+          },
+        ),
+      ],
     );
   }
 }

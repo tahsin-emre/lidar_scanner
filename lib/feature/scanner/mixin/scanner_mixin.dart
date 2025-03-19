@@ -5,4 +5,9 @@ import 'package:lidar_scanner/product/di/locator.dart';
 
 mixin ScannerMixin on State<ScannerView> {
   late final scannerCubit = locator<ScannerCubit>();
+
+  @override
+  void initState() {
+    super.initState();
+  }
 }
