@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lidar_scanner/feature/scanner/cubit/scanner_cubit.dart';
 import 'package:lidar_scanner/feature/scanner/cubit/scanner_state.dart';
 import 'package:lidar_scanner/feature/scanner/mixin/scanner_mixin.dart';
+import 'package:lidar_scanner/product/model/export_format.dart';
 import 'package:lidar_scanner/product/model/scan_result.dart';
 
 final class ScannerView extends StatefulWidget {
@@ -48,18 +49,53 @@ class _ScannerViewState extends State<ScannerView> with ScannerMixin {
       floatingActionButton: BlocBuilder<ScannerCubit, ScannerState>(
         bloc: scannerCubit,
         builder: (context, state) {
-          return FloatingActionButton(
-            onPressed: () {
-              if (!state.canScan) return;
-              if (state.isScanning) {
-                scannerCubit.stopScanning();
-              } else {
-                scannerCubit.startScanning();
-              }
-            },
-            child: Icon(
-              state.isScanning ? Icons.stop : Icons.play_arrow,
-            ),
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              if (state.canScan && !state.isScanning) ...[
+                FloatingActionButton(
+                  heroTag: 'export_fab',
+                  onPressed: () async {
+                    try {
+                      final filePath =
+                          await scannerCubit.exportModel(ExportFormat.obj);
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Exported to: $filePath'),
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Export failed: $e'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  child: const Icon(Icons.save_alt),
+                ),
+                const SizedBox(width: 16),
+              ],
+              FloatingActionButton(
+                heroTag: 'scan_fab',
+                onPressed: () {
+                  if (!state.canScan) return;
+                  if (state.isScanning) {
+                    scannerCubit.stopScanning();
+                  } else {
+                    scannerCubit.startScanning();
+                  }
+                },
+                child: Icon(
+                  state.isScanning ? Icons.stop : Icons.play_arrow,
+                ),
+              ),
+            ],
           );
         },
       ),

@@ -19,7 +19,7 @@ final class ScannerCubit extends Cubit<ScannerState> {
   Future<void> startScanning() async {
     emit(state.copyWith(isScanning: true));
     await _scannerService.startScanning();
-    _monitorScanningProgress();
+    await _monitorScanningProgress();
   }
 
   Future<void> stopScanning() async {
@@ -30,12 +30,14 @@ final class ScannerCubit extends Cubit<ScannerState> {
   Future<void> _monitorScanningProgress() async {
     while (state.isScanning) {
       final progress = await _scannerService.getScanProgress();
-      emit(state.copyWith(
-        scanProgress: progress.progress,
-        isComplete: progress.isComplete,
-        missingAreas: progress.missingAreas,
-      ));
-      await Future.delayed(const Duration(milliseconds: 500));
+      emit(
+        state.copyWith(
+          scanProgress: progress.progress,
+          isComplete: progress.isComplete,
+          missingAreas: progress.missingAreas,
+        ),
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 500));
     }
   }
 

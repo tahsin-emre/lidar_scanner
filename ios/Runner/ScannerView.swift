@@ -92,26 +92,97 @@ class ScannerView: NSObject, FlutterPlatformView, ARSCNViewDelegate, ARSessionDe
 
     func exportModel(format: String) -> String {
         print("Native iOS: exportModel called with format: \(format)")
-        // TODO: Implement actual model export using ARMeshAnchors
-        // Access mesh anchors: let meshAnchors = session.currentFrame?.anchors.compactMap { $0 as? ARMeshAnchor }
-        // Convert mesh data to requested format (OBJ, USDZ etc.) - Requires significant work or libraries.
 
-        // Placeholder implementation
-        let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        // Construct the URL correctly
-        let fileURL = documentsPath.appendingPathComponent("scan_export.\(format.lowercased())") // Keep as URL initially
-        let filePathString = fileURL.path // Get the string path
-        print("Placeholder export path: \(filePathString)")
-        // Simulate saving a dummy file using the string path
-        do {
-            try "dummy content".write(toFile: filePathString, atomically: true, encoding: .utf8)
-        } catch {
-            print("Error writing dummy file: \(error)")
-            // Handle error appropriately, maybe return an empty string or specific error indicator
-            return "" // Return empty string on error
+        guard format.lowercased() == "obj" else {
+            print("Error: Currently only OBJ format is supported for export.")
+            return "" // Return empty path or an error indicator
         }
 
-        return filePathString // Return the string path
+        guard let frame = session.currentFrame else {
+            print("Error: Cannot export model, ARFrame not available.")
+            return ""
+        }
+
+        // Access mesh anchors from the current frame
+        let meshAnchors = frame.anchors.compactMap { $0 as? ARMeshAnchor }
+
+        guard !meshAnchors.isEmpty else {
+            print("Error: No mesh anchors found to export.")
+            return ""
+        }
+
+        var objContent = "# Exported from LiDAR Scanner App\n"
+        var vertexOffset: Int = 0
+        var normalOffset: Int = 0
+
+        // Process each mesh anchor
+        for anchor in meshAnchors {
+            let geometry = anchor.geometry
+            let vertices = geometry.vertices
+            let normals = geometry.normals
+            let faces = geometry.faces
+
+            // Add vertices
+            for i in 0..<vertices.count {
+                let vertex = geometry.vertex(at: UInt32(i))
+                // Apply the anchor's transform to get world coordinates
+                let worldVertex = anchor.transform * simd_float4(vertex, 1)
+                objContent += "v \(worldVertex.x) \(worldVertex.y) \(worldVertex.z)\n"
+            }
+
+            // Add normals
+            for i in 0..<normals.count {
+                let normal = geometry.normal(at: UInt32(i))
+                // Normals are direction vectors, only rotation part of transform matters.
+                // We assume the normal is in the anchor's local space and needs rotation.
+                // Simplified: We might need more precise normal transformation if scale/shear is involved.
+                // For simple rotation/translation, transforming the direction vector is okay.
+                let worldNormal = simd_normalize(simd_make_float3(anchor.transform * simd_float4(normal, 0)))
+                objContent += "vn \(worldNormal.x) \(worldNormal.y) \(worldNormal.z)\n"
+            }
+
+            // Add faces (assuming triangles)
+            if faces.primitiveType == .triangle {
+                for i in 0..<faces.count {
+                    let faceIndices = geometry.faceIndices(at: i)
+                    let v1 = Int(faceIndices[0]) + 1 + vertexOffset // OBJ is 1-based
+                    let v2 = Int(faceIndices[1]) + 1 + vertexOffset
+                    let v3 = Int(faceIndices[2]) + 1 + vertexOffset
+
+                    // Assuming vertex index corresponds to normal index
+                    let n1 = Int(faceIndices[0]) + 1 + normalOffset
+                    let n2 = Int(faceIndices[1]) + 1 + normalOffset
+                    let n3 = Int(faceIndices[2]) + 1 + normalOffset
+
+                    objContent += "f \(v1)//\(n1) \(v2)//\(n2) \(v3)//\(n3)\n"
+                }
+            } else {
+                 print("Warning: Skipping faces with non-triangle primitive type in anchor \(anchor.identifier).")
+            }
+
+            // Update offsets for the next anchor's indices
+            vertexOffset += vertices.count
+            normalOffset += normals.count
+        }
+
+        // --- File Writing ---
+        let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        // Create a unique filename using timestamp
+        let timestamp = Int(Date().timeIntervalSince1970)
+        let fileName = "scan_\(timestamp).obj"
+        let fileURL = documentsPath.appendingPathComponent(fileName)
+        let filePathString = fileURL.path
+
+        print("Attempting to export OBJ to: \(filePathString)")
+
+        do {
+            try objContent.write(to: fileURL, atomically: true, encoding: .utf8)
+            print("Successfully exported OBJ file.")
+            return filePathString // Return the actual path
+        } catch {
+            print("Error writing OBJ file: \(error)")
+            return "" // Return empty string on error
+        }
     }
 
     // MARK: - ARSessionDelegate
@@ -190,5 +261,27 @@ extension SCNGeometryPrimitiveType {
         case .triangle: self = .triangles
         default: return nil // point types not directly supported as elements
         }
+    }
+}
+
+// Helper extension to create SCNGeometry from ARMeshGeometry
+@available(iOS 13.4, *)
+extension ARMeshGeometry {
+    func vertex(at index: UInt32) -> SIMD3<Float> {
+        assert(vertices.format == MTLVertexFormat.float3, "Expected three floats (vertexExecutionOrder.format) for vertices.")
+        let vertexPointer = vertices.buffer.contents().advanced(by: vertices.offset + (vertices.stride * Int(index)))
+        return vertexPointer.assumingMemoryBound(to: SIMD3<Float>.self).pointee
+    }
+
+     func normal(at index: UInt32) -> SIMD3<Float> {
+        assert(normals.format == MTLVertexFormat.float3, "Expected three floats (vertexExecutionOrder.format) for normals.")
+        let normalPointer = normals.buffer.contents().advanced(by: normals.offset + (normals.stride * Int(index)))
+        return normalPointer.assumingMemoryBound(to: SIMD3<Float>.self).pointee
+    }
+
+    func faceIndices(at index: Int) -> SIMD3<UInt32> {
+        assert(faces.bytesPerIndex == MemoryLayout<UInt32>.size, "Expected UInt32 (vertexExecutionOrder.bytesPerIndex) for indices.")
+        let faceIndicesPointer = faces.buffer.contents().advanced(by: (faces.indexCountPerPrimitive * faces.bytesPerIndex * index))
+        return faceIndicesPointer.assumingMemoryBound(to: SIMD3<UInt32>.self).pointee
     }
 } 

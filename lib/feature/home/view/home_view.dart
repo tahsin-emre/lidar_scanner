@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lidar_scanner/feature/home/mixin/home_mixin.dart';
+import 'package:lidar_scanner/feature/saved_scans/view/saved_scans_view.dart';
 import 'package:lidar_scanner/product/utils/extensions/widget_ext.dart';
 
 final class HomeView extends StatefulWidget {
@@ -19,6 +20,9 @@ class _HomeViewState extends State<HomeView> with HomeMixin {
           _Header(hasLidar: hasLidar, deviceInfo: deviceInfo).sliver(),
           _PermissionButton(onTap: requestPermissions).sliver(),
           _StartScanButton(pushToScanner).sliver(),
+          _ViewSavedScansButton(() {
+            const SavedScansView().push(context);
+          }).sliver(),
         ],
       ),
     );
@@ -63,6 +67,28 @@ final class _StartScanButton extends StatelessWidget {
           Icon(Icons.camera),
           SizedBox(width: 8),
           Text('Start New Scan'),
+        ],
+      ),
+    );
+  }
+}
+
+final class _ViewSavedScansButton extends StatelessWidget {
+  const _ViewSavedScansButton(this.onTap);
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      onPressed: onTap,
+      style: ElevatedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+      ),
+      child: const Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.folder_open),
+          SizedBox(width: 8),
+          Text('View Saved Scans'),
         ],
       ),
     );
