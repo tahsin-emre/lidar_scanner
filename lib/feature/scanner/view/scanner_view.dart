@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lidar_scanner/feature/scanner/cubit/scanner_cubit.dart';
 import 'package:lidar_scanner/feature/scanner/cubit/scanner_state.dart';
@@ -13,6 +14,12 @@ final class ScannerView extends StatefulWidget {
 }
 
 class _ScannerViewState extends State<ScannerView> with ScannerMixin {
+  @override
+  void initState() {
+    super.initState();
+    scannerCubit.checkTalent();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -44,9 +51,11 @@ class _ScannerViewState extends State<ScannerView> with ScannerMixin {
           return FloatingActionButton(
             onPressed: () {
               if (!state.canScan) return;
-              state.isScanning
-                  ? () => scannerCubit.stopScanning()
-                  : () => scannerCubit.startScanning();
+              if (state.isScanning) {
+                scannerCubit.stopScanning();
+              } else {
+                scannerCubit.startScanning();
+              }
             },
             child: Icon(
               state.isScanning ? Icons.stop : Icons.play_arrow,
@@ -63,14 +72,23 @@ final class _Body extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const UiKitView(
+    return UiKitView(
       viewType: 'com.example.lidarScanner',
       onPlatformViewCreated: _onPlatformViewCreated,
+      creationParams: const {
+        'initialConfiguration': {
+          'enableTapGesture': true,
+          'enablePinchGesture': true,
+          'enableRotationGesture': true,
+        }
+      },
+      creationParamsCodec: const StandardMessageCodec(),
     );
   }
 
   static void _onPlatformViewCreated(int id) {
     // Platform view created callback
+    debugPrint('Platform view created with id: $id');
   }
 }
 
@@ -121,7 +139,7 @@ class MissingAreasPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.red.withValues(alpha: .3)
+      ..color = Colors.red.withOpacity(0.3)
       ..style = PaintingStyle.fill;
 
     for (final area in areas) {

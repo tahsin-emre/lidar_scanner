@@ -17,7 +17,30 @@ class _HomeViewState extends State<HomeView> with HomeMixin {
       body: CustomScrollView(
         slivers: [
           _Header(hasLidar: hasLidar, deviceInfo: deviceInfo).sliver(),
+          _PermissionButton(onTap: requestPermissions).sliver(),
           _StartScanButton(pushToScanner).sliver(),
+        ],
+      ),
+    );
+  }
+}
+
+class _PermissionButton extends StatelessWidget {
+  const _PermissionButton({required this.onTap});
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      onPressed: onTap,
+      style: ElevatedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+      ),
+      child: const Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.camera),
+          SizedBox(width: 8),
+          Text('Request Permission'),
         ],
       ),
     );

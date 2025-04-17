@@ -15,12 +15,28 @@ mixin HomeMixin on State<HomeView> {
   }
 
   Future<void> _init() async {
-    await _requestPermissions();
+    await requestPermissions();
     await _checkDeviceCapabilities();
   }
 
-  Future<void> _requestPermissions() async {
-    await Permission.camera.request();
+  Future<void> requestPermissions() async {
+    print('Attempting to request camera permission directly...');
+    try {
+      final status = await Permission.camera.request();
+      print('Status after direct request: $status');
+
+      if (status.isGranted) {
+        print('Permission granted after direct request.');
+      } else if (status.isPermanentlyDenied) {
+        print(
+            'Permission permanently denied after direct request. Opening settings...');
+        await openAppSettings(); // Still try to open settings if permanently denied
+      } else {
+        print('Permission denied after direct request.');
+      }
+    } catch (e) {
+      print('Error during permission request: $e');
+    }
   }
 
   Future<void> _checkDeviceCapabilities() async {
@@ -30,12 +46,9 @@ mixin HomeMixin on State<HomeView> {
       if (platform == TargetPlatform.iOS) {
         hasLidar = true;
         deviceInfo = 'iOS device with LiDAR';
-      } else if (platform == TargetPlatform.android) {
-        hasLidar = true;
-        deviceInfo = 'Android device with ARCore depth API';
       } else {
         hasLidar = false;
-        deviceInfo = 'Unsupported platform';
+        deviceInfo = 'Unsupported platform or non-LiDAR iOS device';
       }
     });
   }
@@ -44,11 +57,10 @@ mixin HomeMixin on State<HomeView> {
     if (!hasLidar) {
       showDialog<void>(
         context: context,
-        builder:
-            (context) => const AlertDialog(
-              title: Text('Error'),
-              content: Text('You can not scan yet'),
-            ),
+        builder: (context) => const AlertDialog(
+          title: Text('Error'),
+          content: Text('You can not scan yet'),
+        ),
       );
       return;
     }

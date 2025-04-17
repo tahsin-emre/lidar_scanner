@@ -1,154 +1,107 @@
 import Flutter
 import UIKit
-import ARKit
-import RealityKit
+import ARKit // Import ARKit
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
-    private var lidarScanner: LiDARScanner?
-    
-    override func application(
-        _ application: UIApplication,
-        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
-    ) -> Bool {
-        let controller : FlutterViewController = window?.rootViewController as! FlutterViewController
-        let scannerChannel = FlutterMethodChannel(
-            name: "com.example.lidarScanner",
-            binaryMessenger: controller.binaryMessenger
-        )
-        
-        scannerChannel.setMethodCallHandler { [weak self] (call: FlutterMethodCall, result: @escaping FlutterResult) -> Void in
-            guard let self = self else { return }
-            
-            switch call.method {
-            case "checkTalent":
-                self.checkTalent(result: result)
-            case "startScanning":
-                self.startScanning(result: result)
-            case "stopScanning":
-                self.stopScanning(result: result)
-            case "getScanProgress":
-                self.getScanProgress(result: result)
-            case "exportModel":
-                if let args = call.arguments as? [String: Any],
-                   let format = args["format"] as? String {
-                    self.exportModel(format: format, result: result)
-                } else {
-                    result(FlutterError(code: "INVALID_ARGUMENTS", message: "Format parameter is required", details: nil))
-                }
-            default:
-                result(FlutterMethodNotImplemented)
-            }
-        }
-        
-        GeneratedPluginRegistrant.register(with: self)
-        return super.application(application, didFinishLaunchingWithOptions: launchOptions)
-    }
-    
-    private func checkTalent(result: @escaping FlutterResult) {
-        if ARWorldTrackingConfiguration.supportsSceneReconstruction(.mesh) {
-            result(true)
-        } else {
-            result(false)
-        }
-    }
-    
-    private func startScanning(result: @escaping FlutterResult) {
-        lidarScanner = LiDARScanner()
-        lidarScanner?.startScanning { success in
-            result(success)
-        }
-    }
-    
-    private func stopScanning(result: @escaping FlutterResult) {
-        lidarScanner?.stopScanning { success in
-            result(success)
-        }
-    }
-    
-    private func getScanProgress(result: @escaping FlutterResult) {
-        guard let scanner = lidarScanner else {
-            result(FlutterError(code: "SCANNER_NOT_INITIALIZED", message: "Scanner is not initialized", details: nil))
-            return
-        }
-        
-        let progress = scanner.getScanProgress()
-        result([
-            "progress": progress.progress,
-            "isComplete": progress.isComplete,
-            "missingAreas": progress.missingAreas.map { area in
-                [
-                    "x": area.x,
-                    "y": area.y,
-                    "width": area.width,
-                    "height": area.height
-                ]
-            }
-        ])
-    }
-    
-    private func exportModel(format: String, result: @escaping FlutterResult) {
-        guard let scanner = lidarScanner else {
-            result(FlutterError(code: "SCANNER_NOT_INITIALIZED", message: "Scanner is not initialized", details: nil))
-            return
-        }
-        
-        scanner.exportModel(format: format) { filePath in
-            result(filePath)
-        }
-    }
-}
+  // Add a weak reference to the currently active ScannerView instance
+  weak var activeScannerView: ScannerView?
 
-class LiDARScanner {
-    private var arView: ARView?
-    private var scanningSession: ARSession?
-    private var meshAnchors: [ARMeshAnchor] = []
-    private var isScanning = false
-    
-    func startScanning(completion: @escaping (Bool) -> Void) {
-        guard ARWorldTrackingConfiguration.supportsSceneReconstruction(.mesh) else {
-            completion(false)
-            return
-        }
-        
-        let configuration = ARWorldTrackingConfiguration()
-        configuration.sceneReconstruction = .mesh
-        configuration.environmentTexturing = .automatic
-        
-        arView = ARView(frame: .zero)
-        scanningSession = ARSession()
-        
-        scanningSession?.run(configuration)
-        isScanning = true
-        
-        completion(true)
-    }
-    
-    func stopScanning(completion: @escaping (Bool) -> Void) {
-        isScanning = false
-        scanningSession?.pause()
-        completion(true)
-    }
-    
-    func getScanProgress() -> (progress: Double, isComplete: Bool, missingAreas: [(x: Double, y: Double, width: Double, height: Double)]) {
-        // Implement scan progress calculation based on mesh coverage
-        // This is a simplified version
-        let progress = Double(meshAnchors.count) / 100.0
-        let isComplete = progress >= 1.0
-        let missingAreas = calculateMissingAreas()
-        
-        return (progress, isComplete, missingAreas)
-    }
-    
-    private func calculateMissingAreas() -> [(x: Double, y: Double, width: Double, height: Double)] {
-        // Implement missing areas calculation based on mesh coverage
-        // This is a placeholder implementation
-        return []
-    }
-    
-    func exportModel(format: String, completion: @escaping (String) -> Void) {
-        // Implement model export based on format
-        // This is a placeholder implementation
-        completion("")
-    }
+  override func application(
+    _ application: UIApplication,
+    didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
+  ) -> Bool {
+
+    let controller : FlutterViewController = window?.rootViewController as! FlutterViewController
+    let scannerChannel = FlutterMethodChannel(name: "com.example.lidarScanner",
+                                              binaryMessenger: controller.binaryMessenger)
+
+    scannerChannel.setMethodCallHandler({
+      // Use weak self to avoid retain cycles
+      [weak self] (call: FlutterMethodCall, result: @escaping FlutterResult) -> Void in
+
+      // Safely access self and activeScannerView
+      guard let self = self else { return }
+
+      switch call.method {
+        case "checkTalent":
+          self.checkLidarSupport(result: result)
+        case "startScanning":
+          self.startScanning(result: result)
+        case "stopScanning":
+          self.stopScanning(result: result)
+        case "getScanProgress":
+          self.getScanProgress(result: result)
+        case "exportModel":
+          if let args = call.arguments as? [String: Any],
+             let format = args["format"] as? String {
+            self.exportModel(format: format, result: result)
+          } else {
+            result(FlutterError(code: "INVALID_ARGS", message: "Missing format argument for exportModel", details: nil))
+          }
+        default:
+          result(FlutterMethodNotImplemented)
+      }
+    })
+
+    // Register the Platform View Factory, passing self (AppDelegate) to it
+    let factory = ScannerViewFactory(messenger: controller.binaryMessenger, appDelegate: self)
+    // Ensure the plugin name here matches EXACTLY what might be used elsewhere if you have other plugins
+    // Using a unique string like "com.example.lidarScanner/platformView" might be safer.
+    self.registrar(forPlugin: "com.example.lidarScanner.ScannerViewPlugin")!.register(factory, withId: "com.example.lidarScanner")
+
+    GeneratedPluginRegistrant.register(with: self)
+    return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+
+  // Function to check LiDAR support
+  private func checkLidarSupport(result: FlutterResult) {
+      if #available(iOS 13.4, *) {
+          result(ARWorldTrackingConfiguration.supportsSceneReconstruction(.mesh))
+      } else {
+          result(false) // Scene reconstruction requires iOS 13.4+
+      }
+  }
+
+  // MARK: - Method Channel Handlers (Delegating to activeScannerView)
+
+  private func startScanning(result: FlutterResult) {
+      print("AppDelegate: Delegating startScanning to active view")
+      guard let scannerView = activeScannerView else {
+          result(FlutterError(code: "NO_ACTIVE_VIEW", message: "Scanner view is not available.", details: nil))
+          return
+      }
+      scannerView.startScanning()
+      result(nil) // Indicate success
+  }
+
+  private func stopScanning(result: FlutterResult) {
+      print("AppDelegate: Delegating stopScanning to active view")
+      guard let scannerView = activeScannerView else {
+          result(FlutterError(code: "NO_ACTIVE_VIEW", message: "Scanner view is not available.", details: nil))
+          return
+      }
+      scannerView.stopScanning()
+      result(nil) // Indicate success
+  }
+
+  private func getScanProgress(result: FlutterResult) {
+      print("AppDelegate: Delegating getScanProgress to active view")
+      guard let scannerView = activeScannerView else {
+          result(FlutterError(code: "NO_ACTIVE_VIEW", message: "Scanner view is not available.", details: nil))
+          return
+      }
+      let progressData = scannerView.getScanProgress()
+      result(progressData)
+  }
+
+  private func exportModel(format: String, result: FlutterResult) {
+      print("AppDelegate: Delegating exportModel to active view")
+      guard let scannerView = activeScannerView else {
+          result(FlutterError(code: "NO_ACTIVE_VIEW", message: "Scanner view is not available.", details: nil))
+          return
+      }
+      let filePath = scannerView.exportModel(format: format)
+      result(filePath)
+  }
 }
