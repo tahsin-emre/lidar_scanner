@@ -51,5 +51,7 @@
 	<string>Lidar Scanner needs access to your location to scan your environment.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>io.flutter.embedded_views_preview</key>
+	<true/>
 	</dict>
 </plist>
