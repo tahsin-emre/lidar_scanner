@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:lidar_scanner/feature/home/mixin/home_mixin.dart';
 import 'package:lidar_scanner/feature/saved_scans/view/saved_scans_view.dart';
+import 'package:lidar_scanner/product/utils/enum/scan_type.dart';
 import 'package:lidar_scanner/product/utils/extensions/widget_ext.dart';
+
+part '../widgets/home_header.dart';
 
 final class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -18,8 +21,24 @@ class _HomeViewState extends State<HomeView> with HomeMixin {
       body: CustomScrollView(
         slivers: [
           _Header(hasLidar: hasLidar, deviceInfo: deviceInfo).sliver(),
-          _PermissionButton(onTap: requestPermissions).sliver(),
-          _StartScanButton(pushToScanner).sliver(),
+          _StartScanButton(
+            icon: Icons.wine_bar,
+            label: 'Scan Object',
+            scanType: ScanType.object,
+            onTap: pushToScanner,
+          ).sliver(),
+          _StartScanButton(
+            icon: Icons.landscape,
+            label: 'Scan Field',
+            scanType: ScanType.field,
+            onTap: pushToScanner,
+          ).sliver(),
+          _StartScanButton(
+            icon: Icons.bedroom_parent,
+            label: 'Scan Room',
+            scanType: ScanType.room,
+            onTap: pushToScanner,
+          ).sliver(),
           _ViewSavedScansButton(() {
             const SavedScansView().push(context);
           }).sliver(),
@@ -52,21 +71,29 @@ class _PermissionButton extends StatelessWidget {
 }
 
 final class _StartScanButton extends StatelessWidget {
-  const _StartScanButton(this.onTap);
-  final VoidCallback onTap;
+  const _StartScanButton({
+    required this.onTap,
+    required this.scanType,
+    required this.label,
+    required this.icon,
+  });
+  final ValueChanged<ScanType> onTap;
+  final ScanType scanType;
+  final String label;
+  final IconData icon;
   @override
   Widget build(BuildContext context) {
     return ElevatedButton(
-      onPressed: onTap,
+      onPressed: () => onTap(scanType),
       style: ElevatedButton.styleFrom(
         padding: const EdgeInsets.symmetric(vertical: 16),
       ),
-      child: const Row(
+      child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.camera),
-          SizedBox(width: 8),
-          Text('Start New Scan'),
+          Icon(icon),
+          const SizedBox(width: 8),
+          Text(label),
         ],
       ),
     );
@@ -91,59 +118,6 @@ final class _ViewSavedScansButton extends StatelessWidget {
           Text('View Saved Scans'),
         ],
       ),
-    );
-  }
-}
-
-final class _Header extends StatelessWidget {
-  const _Header({required this.hasLidar, required this.deviceInfo});
-  final bool hasLidar;
-  final String deviceInfo;
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        const Icon(Icons.view_in_ar, size: 100, color: Colors.blue),
-        const SizedBox(height: 24),
-        Text(
-          '3D Object Scanner',
-          style: Theme.of(context).textTheme.headlineMedium,
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Scan real-world objects and create 3D models',
-          style: Theme.of(context).textTheme.bodyLarge,
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 16),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                Text(
-                  'Device Capabilities',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      hasLidar ? Icons.check_circle : Icons.error,
-                      color: hasLidar ? Colors.green : Colors.red,
-                    ),
-                    const SizedBox(width: 8),
-                    Flexible(child: Text(deviceInfo)),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 32),
-      ],
     );
   }
 }

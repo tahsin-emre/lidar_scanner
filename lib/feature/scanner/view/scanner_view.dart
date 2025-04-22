@@ -6,10 +6,11 @@ import 'package:lidar_scanner/feature/scanner/cubit/scanner_state.dart';
 import 'package:lidar_scanner/feature/scanner/mixin/scanner_mixin.dart';
 import 'package:lidar_scanner/product/model/export_format.dart';
 import 'package:lidar_scanner/product/model/scan_result.dart';
+import 'package:lidar_scanner/product/utils/enum/scan_type.dart';
 
 final class ScannerView extends StatefulWidget {
-  const ScannerView({super.key});
-
+  const ScannerView({required this.scanType, super.key});
+  final ScanType scanType;
   @override
   State<ScannerView> createState() => _ScannerViewState();
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lidar_scanner/feature/home/view/home_view.dart';
 import 'package:lidar_scanner/feature/scanner/view/scanner_view.dart';
+import 'package:lidar_scanner/product/utils/enum/scan_type.dart';
 import 'package:lidar_scanner/product/utils/extensions/widget_ext.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -20,22 +21,10 @@ mixin HomeMixin on State<HomeView> {
   }
 
   Future<void> requestPermissions() async {
-    print('Attempting to request camera permission directly...');
-    try {
-      final status = await Permission.camera.request();
-      print('Status after direct request: $status');
-
-      if (status.isGranted) {
-        print('Permission granted after direct request.');
-      } else if (status.isPermanentlyDenied) {
-        print(
-            'Permission permanently denied after direct request. Opening settings...');
-        await openAppSettings(); // Still try to open settings if permanently denied
-      } else {
-        print('Permission denied after direct request.');
-      }
-    } catch (e) {
-      print('Error during permission request: $e');
+    final status = await Permission.camera.request();
+    if (status.isGranted) return;
+    if (status.isPermanentlyDenied) {
+      await openAppSettings();
     }
   }
 
@@ -53,7 +42,7 @@ mixin HomeMixin on State<HomeView> {
     });
   }
 
-  void pushToScanner() {
+  void pushToScanner(ScanType scanType) {
     if (!hasLidar) {
       showDialog<void>(
         context: context,
@@ -64,6 +53,6 @@ mixin HomeMixin on State<HomeView> {
       );
       return;
     }
-    const ScannerView().push(context);
+    ScannerView(scanType: scanType).push(context);
   }
 }

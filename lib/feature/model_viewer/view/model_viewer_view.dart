@@ -1,8 +1,9 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_cube/flutter_cube.dart'; // Use flutter_cube
-import 'package:path_provider/path_provider.dart'; // For temp directory
 import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart'; // For temp directory
 
 // Convert back to StatefulWidget for temp file handling
 class ModelViewerView extends StatefulWidget {
@@ -88,7 +89,7 @@ class _ModelViewerState extends State<ModelViewerView> {
           } else if (snapshot.hasError) {
             return Center(
               child: Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(16),
                 child: Text(
                   'Error preparing model file:\n${snapshot.error}',
                   style: const TextStyle(color: Colors.red),
