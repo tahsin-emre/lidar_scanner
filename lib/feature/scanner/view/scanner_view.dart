@@ -17,15 +17,9 @@ final class ScannerView extends StatefulWidget {
 
 class _ScannerViewState extends State<ScannerView> with ScannerMixin {
   @override
-  void initState() {
-    super.initState();
-    scannerCubit.checkTalent();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('3D Scanner')),
+      appBar: AppBar(title: Text(widget.scanType.name)),
       body: BlocBuilder<ScannerCubit, ScannerState>(
         bloc: scannerCubit,
         builder: (context, state) {

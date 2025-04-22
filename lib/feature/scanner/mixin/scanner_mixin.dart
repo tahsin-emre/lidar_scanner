@@ -9,5 +9,6 @@ mixin ScannerMixin on State<ScannerView> {
   @override
   void initState() {
     super.initState();
+    scannerCubit.checkTalent();
   }
 }
