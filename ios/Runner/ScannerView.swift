@@ -90,8 +90,9 @@ class ScannerView: NSObject, FlutterPlatformView, ARSCNViewDelegate, ARSessionDe
         return progressData
     }
 
-    func exportModel(format: String) -> String {
-        print("Native iOS: exportModel called with format: \(format)")
+    // Update the function signature to accept a fileName
+    func exportModel(format: String, fileName: String) -> String {
+        print("Native iOS: exportModel called with format: \(format), filename: \(fileName)")
 
         guard format.lowercased() == "obj" else {
             print("Error: Currently only OBJ format is supported for export.")
@@ -167,10 +168,14 @@ class ScannerView: NSObject, FlutterPlatformView, ARSCNViewDelegate, ARSessionDe
 
         // --- File Writing ---
         let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        // Create a unique filename using timestamp
-        let timestamp = Int(Date().timeIntervalSince1970)
-        let fileName = "scan_\(timestamp).obj"
-        let fileURL = documentsPath.appendingPathComponent(fileName)
+        // Create a unique filename using timestamp -> Use the provided fileName instead
+        // let timestamp = Int(Date().timeIntervalSince1970)
+        // let fileName = "scan_\(timestamp).obj"
+
+        // Ensure the provided filename ends with .obj
+        let finalFileName = fileName.hasSuffix(".obj") ? fileName : fileName + ".obj"
+
+        let fileURL = documentsPath.appendingPathComponent(finalFileName)
         let filePathString = fileURL.path
 
         print("Attempting to export OBJ to: \(filePathString)")

@@ -56,9 +56,15 @@ class _ScannerViewState extends State<ScannerView> with ScannerMixin {
                 FloatingActionButton(
                   heroTag: 'export_fab',
                   onPressed: () async {
+                    // Show dialog to get filename
+                    final fileName = await _showFileNameDialog(context);
+                    if (fileName == null || fileName.isEmpty) {
+                      return; // User cancelled or entered empty name
+                    }
+
                     try {
-                      final filePath =
-                          await scannerCubit.exportModel(ExportFormat.obj);
+                      final filePath = await scannerCubit.exportModel(
+                          ExportFormat.obj, fileName); // Pass fileName
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
@@ -99,6 +105,47 @@ class _ScannerViewState extends State<ScannerView> with ScannerMixin {
           );
         },
       ),
+    );
+  }
+
+  // Helper function to show the filename dialog
+  Future<String?> _showFileNameDialog(BuildContext context) async {
+    final controller = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Enter File Name'),
+          content: TextField(
+            controller: controller,
+            decoration: const InputDecoration(
+              hintText: 'scan_name',
+              suffixText: '.obj',
+            ),
+            autofocus: true,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(), // Cancel
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                final name = controller.text.trim();
+                if (name.isNotEmpty) {
+                  Navigator.of(context).pop(name);
+                } else {
+                  // Optional: Show error if name is empty
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('File name cannot be empty')),
+                  );
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
     );
   }
 }

@@ -41,7 +41,7 @@ final class ScannerCubit extends Cubit<ScannerState> {
     }
   }
 
-  Future<String> exportModel(ExportFormat format) async {
-    return _scannerService.exportModel(format);
+  Future<String> exportModel(ExportFormat format, String fileName) async {
+    return _scannerService.exportModel(format, fileName);
   }
 }

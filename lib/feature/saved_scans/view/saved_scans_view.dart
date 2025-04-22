@@ -97,7 +97,7 @@ class _SavedScansViewState extends State<SavedScansView> {
           title: Text(fileName),
           subtitle: Text('Path: ${file.path}'), // Show full path if needed
           onTap: () {
-            ModelViewerView(modelPath: file.path, file: file).push(context);
+            ModelViewerView(modelPath: file.path).push(context);
           },
           trailing: IconButton(
             icon: const Icon(Icons.delete_outline, color: Colors.redAccent),

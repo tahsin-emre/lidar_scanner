@@ -66,11 +66,11 @@ final class ScannerService {
     }
   }
 
-  Future<String> exportModel(ExportFormat format) async {
+  Future<String> exportModel(ExportFormat format, String fileName) async {
     try {
       final result = await _channel.invokeMethod<String>(
         'exportModel',
-        {'format': format.name},
+        {'format': format.name, 'fileName': fileName},
       );
       return result ?? '';
     } on PlatformException catch (e) {

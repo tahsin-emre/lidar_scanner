@@ -34,10 +34,11 @@ import ARKit // Import ARKit
           self.getScanProgress(result: result)
         case "exportModel":
           if let args = call.arguments as? [String: Any],
-             let format = args["format"] as? String {
-            self.exportModel(format: format, result: result)
+             let format = args["format"] as? String,
+             let fileName = args["fileName"] as? String {
+            self.exportModel(format: format, fileName: fileName, result: result)
           } else {
-            result(FlutterError(code: "INVALID_ARGS", message: "Missing format argument for exportModel", details: nil))
+            result(FlutterError(code: "INVALID_ARGS", message: "Missing format or fileName argument for exportModel", details: nil))
           }
         default:
           result(FlutterMethodNotImplemented)
@@ -95,13 +96,13 @@ import ARKit // Import ARKit
       result(progressData)
   }
 
-  private func exportModel(format: String, result: FlutterResult) {
-      print("AppDelegate: Delegating exportModel to active view")
+  private func exportModel(format: String, fileName: String, result: FlutterResult) {
+      print("AppDelegate: Delegating exportModel to active view with fileName: \(fileName)")
       guard let scannerView = activeScannerView else {
           result(FlutterError(code: "NO_ACTIVE_VIEW", message: "Scanner view is not available.", details: nil))
           return
       }
-      let filePath = scannerView.exportModel(format: format)
+      let filePath = scannerView.exportModel(format: format, fileName: fileName)
       result(filePath)
   }
 }
