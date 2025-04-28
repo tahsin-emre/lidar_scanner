@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:injectable/injectable.dart';
 import 'package:lidar_scanner/product/model/export_format.dart';
 import 'package:lidar_scanner/product/model/scan_result.dart';
+import 'package:lidar_scanner/product/utils/enum/scan_quality.dart';
 
 @singleton
 final class ScannerService {
@@ -19,9 +20,12 @@ final class ScannerService {
     }
   }
 
-  Future<void> startScanning() async {
+  Future<void> startScanning({required ScanQuality quality}) async {
     try {
-      await _channel.invokeMethod('startScanning');
+      await _channel.invokeMethod('startScanning', {
+        'scanType': quality.name,
+        'configuration': quality.configuration,
+      });
     } on PlatformException catch (e) {
       print('Error starting scan: ${e.message}');
       rethrow;

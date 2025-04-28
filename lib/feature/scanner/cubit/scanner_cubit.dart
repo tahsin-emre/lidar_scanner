@@ -3,6 +3,7 @@ import 'package:injectable/injectable.dart';
 import 'package:lidar_scanner/feature/scanner/cubit/scanner_state.dart';
 import 'package:lidar_scanner/product/model/export_format.dart';
 import 'package:lidar_scanner/product/service/scanner_service.dart';
+import 'package:lidar_scanner/product/utils/enum/scan_quality.dart';
 
 @injectable
 final class ScannerCubit extends Cubit<ScannerState> {
@@ -15,9 +16,9 @@ final class ScannerCubit extends Cubit<ScannerState> {
     emit(state.copyWith(canScan: result));
   }
 
-  Future<void> startScanning() async {
+  Future<void> startScanning({required ScanQuality scanQuality}) async {
     emit(state.copyWith(isScanning: true));
-    await _scannerService.startScanning();
+    await _scannerService.startScanning(quality: scanQuality);
     await _monitorScanningProgress();
   }
 

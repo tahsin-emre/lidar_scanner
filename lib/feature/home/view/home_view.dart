@@ -17,27 +17,34 @@ class _HomeViewState extends State<HomeView> with HomeMixin {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Lidar Scanner')),
       body: CustomScrollView(
         slivers: [
+          const SliverAppBar(
+            title: Text('Lidar Scanner'),
+            elevation: 0,
+          ),
           _Header(hasLidar: hasLidar, deviceInfo: deviceInfo).sliver(),
-          _StartScanButton(
-            icon: Icons.wine_bar,
-            label: 'Scan Object',
-            scanType: ScanType.object,
-            onTap: pushToScanner,
-          ).sliver(),
-          _StartScanButton(
-            icon: Icons.landscape,
-            label: 'Scan Field',
-            scanType: ScanType.field,
-            onTap: pushToScanner,
-          ).sliver(),
-          _StartScanButton(
-            icon: Icons.bedroom_parent,
-            label: 'Scan Room',
-            scanType: ScanType.room,
-            onTap: pushToScanner,
+          Row(
+            children: [
+              _StartScanButton(
+                icon: Icons.wine_bar,
+                label: 'Scan Object',
+                scanType: ScanType.object,
+                onTap: pushToScanner,
+              ),
+              _StartScanButton(
+                icon: Icons.landscape,
+                label: 'Scan Field',
+                scanType: ScanType.field,
+                onTap: pushToScanner,
+              ),
+              _StartScanButton(
+                icon: Icons.bedroom_parent,
+                label: 'Scan Room',
+                scanType: ScanType.room,
+                onTap: pushToScanner,
+              ),
+            ],
           ).sliver(),
           _ViewSavedScansButton(() {
             const SavedScansView().push(context);
@@ -83,18 +90,26 @@ final class _StartScanButton extends StatelessWidget {
   final IconData icon;
   @override
   Widget build(BuildContext context) {
-    return ElevatedButton(
-      onPressed: () => onTap(scanType),
-      style: ElevatedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon),
-          const SizedBox(width: 8),
-          Text(label),
-        ],
+    return Expanded(
+      child: Card(
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          child: InkWell(
+            onTap: () => onTap(scanType),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  size: 40,
+                  color: const Color(0xff29fcfe),
+                ),
+                const SizedBox(height: 8),
+                Text(label),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

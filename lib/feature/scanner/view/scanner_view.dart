@@ -19,7 +19,15 @@ class _ScannerViewState extends State<ScannerView> with ScannerMixin {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.scanType.name)),
+      appBar: AppBar(
+        title: Text(widget.scanType.name),
+        actions: [
+          IconButton(
+            onPressed: changeScanQuality,
+            icon: Icon(scanQualityIcon),
+          ),
+        ],
+      ),
       body: BlocBuilder<ScannerCubit, ScannerState>(
         bloc: scannerCubit,
         builder: (context, state) {
@@ -101,7 +109,7 @@ class _ScannerViewState extends State<ScannerView> with ScannerMixin {
     if (state.isScanning) {
       scannerCubit.stopScanning();
     } else {
-      scannerCubit.startScanning();
+      scannerCubit.startScanning(scanQuality: scanQuality);
     }
   }
 

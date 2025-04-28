@@ -27,7 +27,7 @@ import ARKit // Import ARKit
         case "checkTalent":
           self.checkLidarSupport(result: result)
         case "startScanning":
-          self.startScanning(result: result)
+          self.startScanning(call: call, result: result)
         case "stopScanning":
           self.stopScanning(result: result)
         case "getScanProgress":
@@ -66,13 +66,22 @@ import ARKit // Import ARKit
 
   // MARK: - Method Channel Handlers (Delegating to activeScannerView)
 
-  private func startScanning(result: FlutterResult) {
+  private func startScanning(call: FlutterMethodCall, result: FlutterResult) {
       print("AppDelegate: Delegating startScanning to active view")
       guard let scannerView = activeScannerView else {
           result(FlutterError(code: "NO_ACTIVE_VIEW", message: "Scanner view is not available.", details: nil))
           return
       }
-      scannerView.startScanning()
+      
+      if let arguments = call.arguments as? [String: Any],
+         let scanType = arguments["scanType"] as? String,
+         let configuration = arguments["configuration"] as? [String: Any] {
+          scannerView.startScanning(scanQuality: scanType, configuration: configuration)
+      } else {
+          // Fallback to default balanced quality if no parameters provided
+          scannerView.startScanning(scanQuality: "balanced", configuration: [:])
+      }
+      
       result(nil) // Indicate success
   }
 
