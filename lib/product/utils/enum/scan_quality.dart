@@ -21,17 +21,22 @@ extension ScanQualityExtension on ScanQuality {
         };
       case ScanQuality.highQuality:
         return {
-          'resolution': 0.005,
-          'maxPoints': 300000,
-          'quality': 'high',
-          'updateInterval': 0.03,
-          'smoothingFactor': 0.8,
+          'resolution': 0.001, // 1mm ultra-yüksek çözünürlük
+          'maxPoints': 1000000, // Çok daha fazla nokta
+          'quality': 'ultra',
+          'updateInterval': 0.01, // 10ms - çok hızlı güncelleme
+          'smoothingFactor': 0.3, // Daha az yumuşatma - köşeler daha net
           'enhanceVisuals': true,
           'enhancedColors': true,
-          'textureResolution': 'high',
+          'textureResolution': 'ultra', // En yüksek doku çözünürlüğü
           'wireframe': true,
           'wireThickness': 0.5,
           'detailedBackground': true,
+          'edgeDetection': true, // Köşe algılama
+          'precisionMode': true, // Hassas mod
+          'maxDetail': true, // Maksimum detay
+          'exportQuality': 'raw', // İşlenmemiş ham veri kalitesi
+          'captureMeshDensity': 'extreme', // Aşırı yoğun mesh
         };
     }
   }
