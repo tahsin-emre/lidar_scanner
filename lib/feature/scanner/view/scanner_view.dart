@@ -84,14 +84,7 @@ class _ScannerViewState extends State<ScannerView> with ScannerMixin {
               ],
               FloatingActionButton(
                 heroTag: 'scan_fab',
-                onPressed: () {
-                  if (!state.canScan) return;
-                  if (state.isScanning) {
-                    scannerCubit.stopScanning();
-                  } else {
-                    scannerCubit.startScanning();
-                  }
-                },
+                onPressed: () => _toggleScanning(state),
                 child: Icon(
                   state.isScanning ? Icons.stop : Icons.play_arrow,
                 ),
@@ -101,6 +94,15 @@ class _ScannerViewState extends State<ScannerView> with ScannerMixin {
         },
       ),
     );
+  }
+
+  Future<void> _toggleScanning(ScannerState state) async {
+    if (!state.canScan) return;
+    if (state.isScanning) {
+      scannerCubit.stopScanning();
+    } else {
+      scannerCubit.startScanning();
+    }
   }
 
   // Helper function to show the filename dialog

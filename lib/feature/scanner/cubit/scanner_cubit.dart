@@ -6,8 +6,7 @@ import 'package:lidar_scanner/product/service/scanner_service.dart';
 
 @injectable
 final class ScannerCubit extends Cubit<ScannerState> {
-  ScannerCubit(this._scannerService)
-      : super(const ScannerState(canScan: false, isScanning: false));
+  ScannerCubit(this._scannerService) : super(const ScannerState());
 
   final ScannerService _scannerService;
 
