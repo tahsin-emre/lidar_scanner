@@ -17,31 +17,68 @@ final class ScannerView extends StatefulWidget {
 
 class _ScannerViewState extends State<ScannerView> with ScannerMixin {
   @override
+  void initState() {
+    super.initState();
+    scannerCubit.checkTalent();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.scanType.name)),
-      body: BlocBuilder<ScannerCubit, ScannerState>(
-        bloc: scannerCubit,
-        builder: (context, state) {
-          if (!state.canScan) {
-            return const Center(
-              child: Text('This device does not support LiDAR scanning'),
-            );
-          }
-
-          return Stack(
-            children: [
-              const _Body(),
-              if (state.isScanning) ...[
-                _ScanningOverlay(progress: state.scanProgress),
-                if (state.missingAreas.isNotEmpty)
-                  _MissingAreasOverlay(areas: state.missingAreas),
-              ],
-            ],
-          );
-        },
+      appBar: AppBar(
+        title: Text(widget.scanType.name),
+        actions: [
+          IconButton(
+            onPressed: changeScanQuality,
+            icon: Icon(scanQualityIcon),
+            tooltip: 'Tarama Kalitesi: ${scanQuality.name}',
+          ),
+        ],
       ),
-      floatingActionButton: BlocBuilder<ScannerCubit, ScannerState>(
+      backgroundColor: Colors.black,
+      body: SafeArea(
+        child: Stack(
+          children: [
+            _buildScannerView(),
+            _buildControls(),
+            if (widget.scanType == ScanType.objectScan)
+              _buildObjectScanControls(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildScannerView() {
+    return BlocBuilder<ScannerCubit, ScannerState>(
+      bloc: scannerCubit,
+      builder: (context, state) {
+        if (!state.canScan) {
+          return const Center(
+            child: Text('This device does not support LiDAR scanning'),
+          );
+        }
+
+        return Stack(
+          children: [
+            const _Body(),
+            if (state.isScanning) ...[
+              _ScanningOverlay(progress: state.scanProgress),
+              if (state.missingAreas.isNotEmpty)
+                _MissingAreasOverlay(areas: state.missingAreas),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildControls() {
+    return Positioned(
+      bottom: 0,
+      left: 0,
+      right: 0,
+      child: BlocBuilder<ScannerCubit, ScannerState>(
         bloc: scannerCubit,
         builder: (context, state) {
           return Row(
@@ -58,12 +95,17 @@ class _ScannerViewState extends State<ScannerView> with ScannerMixin {
                     }
 
                     try {
-                      final filePath = await scannerCubit.exportModel(
-                          ExportFormat.obj, fileName); // Pass fileName
+                      final result = await scannerCubit.exportModel(
+                        format: ExportFormat.obj,
+                        fileName: fileName,
+                      );
+
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text('Exported to: $filePath'),
+                            content: Text(result.isSuccess
+                                ? 'Exported to: ${result.filePath}'
+                                : 'Export failed'),
                           ),
                         );
                       }
@@ -96,12 +138,47 @@ class _ScannerViewState extends State<ScannerView> with ScannerMixin {
     );
   }
 
+  Widget _buildObjectScanControls() {
+    return Positioned(
+      bottom: 140,
+      left: 0,
+      right: 0,
+      child: Center(
+        child: BlocBuilder<ScannerCubit, ScannerState>(
+          bloc: scannerCubit,
+          builder: (context, state) {
+            if (!state.isScanning) return const SizedBox.shrink();
+
+            return ElevatedButton(
+              onPressed: () => scannerCubit.setObjectScanCenter(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+              ),
+              child: const Text(
+                'Hedef Nesneyi Ayarla',
+                style: TextStyle(fontSize: 16),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
   Future<void> _toggleScanning(ScannerState state) async {
     if (!state.canScan) return;
     if (state.isScanning) {
       scannerCubit.stopScanning();
     } else {
-      scannerCubit.startScanning();
+      scannerCubit.startScanning(
+        scanQuality: scanQuality,
+        scanType: widget.scanType,
+      );
     }
   }
 

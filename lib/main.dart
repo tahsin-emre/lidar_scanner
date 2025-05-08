@@ -18,7 +18,10 @@ class MyApp extends StatelessWidget {
       home: const HomeView(),
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.red),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blue.shade900,
+          brightness: Brightness.dark,
+        ),
         useMaterial3: true,
       ),
     );
