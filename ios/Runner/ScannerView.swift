@@ -309,6 +309,7 @@ class ScannerView: NSObject, FlutterPlatformView, ARSCNViewDelegate, ARSessionDe
 
         var objContent = "# Point Cloud exported from LiDAR Scanner App\n"
         var vertexOffset: Int = 0
+        var normalOffset: Int = 0
 
         // Check if we should export in ultra-high quality mode
         let isUltraHighQuality = currentscanQuality == "highQuality"
