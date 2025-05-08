@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Material;
 import 'package:flutter_cube/flutter_cube.dart'; // Use flutter_cube
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart'; // For temp directory
@@ -59,27 +59,22 @@ class _ModelViewerState extends State<ModelViewerView> {
   void dispose() {
     // Delete the temporary file when the widget is disposed
     if (_createdTempPath != null) {
-      final tempFile = File(_createdTempPath!);
-      tempFile.exists().then((exists) {
-        if (exists) {
-          tempFile.delete().then((_) {
-            debugPrint('Temporary file deleted: $_createdTempPath');
-          }).catchError((e) {
-            debugPrint('Error deleting temporary file: $e');
-          });
-        }
-      });
+      try {
+        File(_createdTempPath!).deleteSync();
+        debugPrint('Temporary file deleted: $_createdTempPath');
+      } catch (e) {
+        debugPrint('Error deleting temporary file: $e');
+      }
     }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Get the original filename for the AppBar title
-    final originalFileName = p.basename(widget.modelPath);
-
     return Scaffold(
-      appBar: AppBar(title: Text(originalFileName)),
+      appBar: AppBar(
+        title: const Text('Point Cloud Viewer'),
+      ),
       // Use FutureBuilder to wait for the temporary file path
       body: FutureBuilder<String>(
         future: _tempModelPathFuture,
@@ -101,13 +96,47 @@ class _ModelViewerState extends State<ModelViewerView> {
             // Temporary path is ready, build the Cube widget
             final tempModelPath = snapshot.data!;
             final object = Object(fileName: tempModelPath, lighting: true);
+
             return Cube(
               onSceneCreated: (Scene scene) {
                 scene.world.add(object);
-                // You might need to adjust camera/light settings again for flutter_cube
+
+                // Convert mesh to points
+                if (object.mesh != null) {
+                  final vertices = object.mesh!.vertices;
+                  final points = <Object>[];
+
+                  // Create a point for each vertex
+                  for (var i = 0; i < vertices.length; i += 3) {
+                    final point = Object(
+                      mesh: Mesh(
+                        vertices: [
+                          vertices[i],
+                          vertices[i + 1],
+                          vertices[i + 2]
+                        ],
+                        indices: [Polygon(0, 1, 2)],
+                      ),
+                    );
+                    final material = Material()
+                      ..diffuse = fromColor(Colors.blue);
+                    point.mesh.material = material;
+                    points.add(point);
+                  }
+
+                  // Remove original object and add points
+                  scene.world.remove(object);
+                  for (final point in points) {
+                    scene.world.add(point);
+                  }
+                }
+
+                // Adjust camera settings
                 scene.camera.position.setFrom(Vector3(0, 5, 15));
                 scene.camera.target.setFrom(Vector3(0, 0, 0));
                 scene.camera.zoom = 1.0;
+
+                // Add lighting
                 scene.light.position.setFrom(Vector3(10, 20, 10));
                 scene.light.setColor(Colors.white, 0.8, 0.4, 0.2);
               },
