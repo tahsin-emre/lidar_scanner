@@ -40,6 +40,8 @@ import ARKit // Import ARKit
           } else {
             result(FlutterError(code: "INVALID_ARGS", message: "Missing format or fileName argument for exportModel", details: nil))
           }
+        case "setObjectScanCenter":
+          self.setObjectScanCenter(result: result)
         default:
           result(FlutterMethodNotImplemented)
       }
@@ -74,12 +76,13 @@ import ARKit // Import ARKit
       }
       
       if let arguments = call.arguments as? [String: Any],
+         let scanQuality = arguments["scanQuality"] as? String,
          let scanType = arguments["scanType"] as? String,
          let configuration = arguments["configuration"] as? [String: Any] {
-          scannerView.startScanning(scanQuality: scanType, configuration: configuration)
+          scannerView.startScanning(scanQuality: scanQuality, scanType: scanType, configuration: configuration)
       } else {
-          // Fallback to default balanced quality if no parameters provided
-          scannerView.startScanning(scanQuality: "balanced", configuration: [:])
+          // Fallback to default settings if no parameters provided
+          scannerView.startScanning(scanQuality: "highQuality", scanType: "roomScan", configuration: [:])
       }
       
       result(nil) // Indicate success
@@ -113,5 +116,15 @@ import ARKit // Import ARKit
       }
       let filePath = scannerView.exportModel(format: format, fileName: fileName)
       result(filePath)
+  }
+
+  private func setObjectScanCenter(result: FlutterResult) {
+      print("AppDelegate: Delegating setObjectScanCenter to active view")
+      guard let scannerView = activeScannerView else {
+          result(FlutterError(code: "NO_ACTIVE_VIEW", message: "Scanner view is not available.", details: nil))
+          return
+      }
+      scannerView.setObjectScanCenter()
+      result(nil) // Indicate success
   }
 }

@@ -10,8 +10,14 @@ class ScannerView: NSObject, FlutterPlatformView, ARSCNViewDelegate, ARSessionDe
     
     private var isScanning = false
     private var currentscanQuality: String = "medium"
+    private var currentscanType: String = "roomScan" // Default to room scan
     private var scanConfiguration: [String: Any] = [:]
     private var lastUpdateTime: TimeInterval = 0
+    
+    // Object scan specific properties
+    private var objectScanCenter: simd_float3? = nil
+    private var objectScanRadius: Float = 1.5 // Default max distance for object scan
+    private var objectFocusNode: SCNNode? = nil
     
     init(
         frame: CGRect,
@@ -67,7 +73,7 @@ class ScannerView: NSObject, FlutterPlatformView, ARSCNViewDelegate, ARSessionDe
     
     // MARK: - Public Control Methods
     
-    func startScanning(scanQuality: String, configuration: [String: Any]) {
+    func startScanning(scanQuality: String, scanType: String, configuration: [String: Any]) {
         guard ARWorldTrackingConfiguration.isSupported else {
             print("ARWorldTracking is not supported on this device.")
             return
@@ -79,12 +85,18 @@ class ScannerView: NSObject, FlutterPlatformView, ARSCNViewDelegate, ARSessionDe
         }
         
         self.currentscanQuality = scanQuality
+        self.currentscanType = scanType
         self.scanConfiguration = configuration
+        
+        // Reset object scan state
+        objectScanCenter = nil
+        objectFocusNode?.removeFromParentNode()
+        objectFocusNode = nil
         
         // Configure scanning based on type
         configureScanning()
         
-        print("Native iOS: Starting AR session with scan type: \(scanQuality)")
+        print("Native iOS: Starting AR session with scan type: \(scanType), quality: \(scanQuality)")
         isScanning = true
         session.run(self.configuration, options: [.resetTracking, .removeExistingAnchors])
     }
@@ -122,6 +134,71 @@ class ScannerView: NSObject, FlutterPlatformView, ARSCNViewDelegate, ARSessionDe
         
         // Enable plane detection
         configuration.planeDetection = [.horizontal, .vertical]
+        
+        // Configure for scan type
+        if currentscanType == "objectScan" {
+            // Configure for object scanning
+            setupObjectScanMode()
+        } else {
+            // Configure for room scanning
+            setupRoomScanMode()
+        }
+    }
+    
+    private func setupObjectScanMode() {
+        // Create a visual indicator for object focus area
+        objectFocusNode = createObjectFocusIndicator()
+        arView.scene.rootNode.addChildNode(objectFocusNode!)
+        
+        // Get object scan distance from configuration
+        if let maxDistance = scanConfiguration["maxDistance"] as? Float {
+            objectScanRadius = maxDistance
+        }
+        
+        print("Configured for object scan mode with radius: \(objectScanRadius)m")
+    }
+    
+    private func setupRoomScanMode() {
+        // Standard room scanning configuration
+        // No special setup needed beyond the default
+        print("Configured for room scan mode")
+    }
+    
+    private func createObjectFocusIndicator() -> SCNNode {
+        // Create a visual indicator for the object focus area
+        let sphereGeometry = SCNSphere(radius: CGFloat(objectScanRadius))
+        let material = SCNMaterial()
+        material.diffuse.contents = UIColor.green.withAlphaComponent(0.2)
+        material.isDoubleSided = true
+        sphereGeometry.materials = [material]
+        
+        let node = SCNNode(geometry: sphereGeometry)
+        node.opacity = 0.5
+        node.name = "objectFocusIndicator"
+        return node
+    }
+    
+    private func updateObjectFocusPosition() {
+        guard let currentFrame = session.currentFrame,
+              let focusNode = objectFocusNode else { return }
+        
+        // If we don't have a center yet, use camera position
+        if objectScanCenter == nil {
+            // Use the camera position as the initial center
+            let cameraTransform = currentFrame.camera.transform
+            let cameraPosition = simd_make_float3(cameraTransform.columns.3)
+            
+            // Move the center point 1 meter in front of the camera
+            let cameraForward = -simd_make_float3(cameraTransform.columns.2)
+            objectScanCenter = cameraPosition + cameraForward
+            
+            print("Setting initial object scan center: \(objectScanCenter!)")
+        }
+        
+        // Update the focus indicator position
+        if let center = objectScanCenter {
+            focusNode.position = SCNVector3(center.x, center.y, center.z)
+        }
     }
     
     private func processHighQualityScan(geometry: ARMeshGeometry, anchor: ARMeshAnchor) {
@@ -140,8 +217,21 @@ class ScannerView: NSObject, FlutterPlatformView, ARSCNViewDelegate, ARSessionDe
     private func processMesh(frame: ARFrame) {
         let meshAnchors = frame.anchors.compactMap { $0 as? ARMeshAnchor }
         
+        // If in object scan mode, update the focus area
+        if currentscanType == "objectScan" {
+            updateObjectFocusPosition()
+        }
+        
         for anchor in meshAnchors {
             let geometry = anchor.geometry
+            
+            // Filter anchors for object scan mode
+            if currentscanType == "objectScan" {
+                if !isAnchorWithinObjectBounds(anchor) {
+                    // Skip anchors outside our object bounds
+                    continue
+                }
+            }
             
             // Apply scan type specific processing
             switch currentscanQuality {
@@ -154,6 +244,22 @@ class ScannerView: NSObject, FlutterPlatformView, ARSCNViewDelegate, ARSessionDe
                 processHighQualityScan(geometry: geometry, anchor: anchor)
             }
         }
+    }
+    
+    private func isAnchorWithinObjectBounds(_ anchor: ARMeshAnchor) -> Bool {
+        // Check if this anchor is within our object scan bounds
+        guard let center = objectScanCenter else {
+            return true // If no center set, include all anchors
+        }
+        
+        // Get anchor center position
+        let anchorPosition = simd_make_float3(anchor.transform.columns.3)
+        
+        // Calculate distance from object center
+        let distance = simd_distance(anchorPosition, center)
+        
+        // Return true if the anchor is within our defined radius
+        return distance <= objectScanRadius
     }
     
     private func enhanceMeshVisualization(for geometry: ARMeshGeometry, withColor color: UIColor, wireframe: Bool, highDetail: Bool = false) {
@@ -207,9 +313,16 @@ class ScannerView: NSObject, FlutterPlatformView, ARSCNViewDelegate, ARSessionDe
 
         // Check if we should export in ultra-high quality mode
         let isUltraHighQuality = currentscanQuality == "highQuality"
+        
+        // For object scans, we need to filter anchors
+        var filteredAnchors = meshAnchors
+        if currentscanType == "objectScan" {
+            filteredAnchors = meshAnchors.filter { isAnchorWithinObjectBounds($0) }
+            print("Filtered \(meshAnchors.count - filteredAnchors.count) anchors outside object bounds")
+        }
 
         // Process each mesh anchor
-        for anchor in meshAnchors {
+        for anchor in filteredAnchors {
             let geometry = anchor.geometry
             
             // For high quality scans, apply additional mesh refinement before export
@@ -541,6 +654,11 @@ class ScannerView: NSObject, FlutterPlatformView, ARSCNViewDelegate, ARSessionDe
         guard let meshAnchor = anchor as? ARMeshAnchor else {
             return nil
         }
+        
+        // Filter out anchors outside our object bounds in object scan mode
+        if currentscanType == "objectScan" && !isAnchorWithinObjectBounds(meshAnchor) {
+            return nil // Don't create a node for this anchor
+        }
 
         // Create a SCNGeometry from the mesh anchor's geometry.
         let geometry = SCNGeometry(arGeometry: meshAnchor.geometry)
@@ -558,9 +676,6 @@ class ScannerView: NSObject, FlutterPlatformView, ARSCNViewDelegate, ARSessionDe
         if currentscanQuality == "highQuality" {
             // Thinner lines for high quality - use semi-transparent white
             material.diffuse.contents = UIColor(white: 1.0, alpha: 0.8)
-            // Use line width property of SCNNode if needed
-            // There's no direct way to set line width in SceneKit
-            // but we can use transparency to make it appear finer
         } else {
             // Thicker lines for low quality - use solid white
             material.diffuse.contents = UIColor(white: 1.0, alpha: 1.0)
@@ -759,6 +874,32 @@ class ScannerView: NSObject, FlutterPlatformView, ARSCNViewDelegate, ARSessionDe
             // Enhance environment lighting in the ARSCNView's scene
             arView.scene.lightingEnvironment.intensity = 2.0
         }
+    }
+
+    func setObjectScanCenter() {
+        guard let currentFrame = session.currentFrame else { return }
+        
+        // Use the camera position and orientation to set center point
+        let cameraTransform = currentFrame.camera.transform
+        let cameraPosition = simd_make_float3(cameraTransform.columns.3)
+        let cameraForward = -simd_make_float3(cameraTransform.columns.2)
+        
+        // Set object scan center to be 1 meter in front of camera
+        objectScanCenter = cameraPosition + cameraForward
+        
+        // Update the visual indicator
+        if let focusNode = objectFocusNode {
+            focusNode.position = SCNVector3(objectScanCenter!.x, objectScanCenter!.y, objectScanCenter!.z)
+            
+            // Make it more visible briefly
+            let pulseAction = SCNAction.sequence([
+                SCNAction.fadeOpacity(to: 0.8, duration: 0.3),
+                SCNAction.fadeOpacity(to: 0.2, duration: 0.3)
+            ])
+            focusNode.runAction(pulseAction)
+        }
+        
+        print("Object scan center set to: \(objectScanCenter!)")
     }
 }
 

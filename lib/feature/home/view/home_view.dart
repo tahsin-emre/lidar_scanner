@@ -29,19 +29,13 @@ class _HomeViewState extends State<HomeView> with HomeMixin {
               _StartScanButton(
                 icon: Icons.wine_bar,
                 label: 'Scan Object',
-                scanType: ScanType.object,
-                onTap: pushToScanner,
-              ),
-              _StartScanButton(
-                icon: Icons.landscape,
-                label: 'Scan Field',
-                scanType: ScanType.field,
+                scanType: ScanType.objectScan,
                 onTap: pushToScanner,
               ),
               _StartScanButton(
                 icon: Icons.bedroom_parent,
                 label: 'Scan Room',
-                scanType: ScanType.room,
+                scanType: ScanType.roomScan,
                 onTap: pushToScanner,
               ),
             ],
@@ -49,28 +43,6 @@ class _HomeViewState extends State<HomeView> with HomeMixin {
           _ViewSavedScansButton(() {
             const SavedScansView().push(context);
           }).sliver(),
-        ],
-      ),
-    );
-  }
-}
-
-class _PermissionButton extends StatelessWidget {
-  const _PermissionButton({required this.onTap});
-  final VoidCallback onTap;
-  @override
-  Widget build(BuildContext context) {
-    return ElevatedButton(
-      onPressed: onTap,
-      style: ElevatedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-      ),
-      child: const Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.camera),
-          SizedBox(width: 8),
-          Text('Request Permission'),
         ],
       ),
     );
