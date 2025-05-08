@@ -8,7 +8,10 @@ final class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        const Icon(Icons.view_in_ar, size: 100, color: Colors.blue),
+        Image.asset(
+          'assets/app_icons/appstore.png',
+          height: 200,
+        ),
         const SizedBox(height: 24),
         Text(
           '3D Object Scanner',

@@ -1,7 +1,10 @@
 import 'package:flutter/services.dart';
 import 'package:injectable/injectable.dart';
 import 'package:lidar_scanner/product/model/export_format.dart';
+import 'package:lidar_scanner/product/model/export_result.dart';
 import 'package:lidar_scanner/product/model/scan_result.dart';
+import 'package:lidar_scanner/product/utils/enum/scan_quality.dart';
+import 'package:lidar_scanner/product/utils/enum/scan_type.dart';
 
 @singleton
 final class ScannerService {
@@ -19,9 +22,17 @@ final class ScannerService {
     }
   }
 
-  Future<void> startScanning() async {
+  Future<void> startScanning(
+      {required ScanQuality quality, required ScanType scanType}) async {
     try {
-      await _channel.invokeMethod('startScanning');
+      await _channel.invokeMethod('startScanning', {
+        'scanQuality': quality.name,
+        'scanType': scanType.name,
+        'configuration': {
+          ...quality.configuration,
+          ...scanType.configuration,
+        },
+      });
     } on PlatformException catch (e) {
       print('Error starting scan: ${e.message}');
       rethrow;
@@ -40,41 +51,53 @@ final class ScannerService {
   Future<ScanResult> getScanProgress() async {
     try {
       final result =
-          await _channel.invokeMethod<Map<dynamic, dynamic>>('getScanProgress');
-      if (result == null) {
-        throw PlatformException(
-          code: 'INVALID_RESULT',
-          message: 'Failed to get scan progress',
+          await _channel.invokeMapMethod<String, dynamic>('getScanProgress');
+      if (result != null) {
+        return ScanResult(
+          progress: result['progress'] as double? ?? 0.0,
+          isComplete: result['isComplete'] as bool? ?? false,
+          missingAreas: result['missingAreas'] != null
+              ? (result['missingAreas'] as List)
+                  .map((e) => ScanArea(
+                        x: e['x'] as double? ?? 0.0,
+                        y: e['y'] as double? ?? 0.0,
+                        width: e['width'] as double? ?? 0.0,
+                        height: e['height'] as double? ?? 0.0,
+                      ))
+                  .toList()
+              : [],
         );
       }
-
-      return ScanResult(
-        progress: result['progress'] as double,
-        isComplete: result['isComplete'] as bool,
-        missingAreas: (result['missingAreas'] as List)
-            .map((area) => ScanArea(
-                  x: area['x'] as double,
-                  y: area['y'] as double,
-                  width: area['width'] as double,
-                  height: area['height'] as double,
-                ))
-            .toList(),
-      );
+      return const ScanResult(
+          progress: 0.0, isComplete: false, missingAreas: []);
     } on PlatformException catch (e) {
       print('Error getting scan progress: ${e.message}');
-      rethrow;
+      return const ScanResult(
+          progress: 0.0, isComplete: false, missingAreas: []);
     }
   }
 
-  Future<String> exportModel(ExportFormat format, String fileName) async {
+  Future<ExportResult> exportModel(
+      {required ExportFormat format, required String fileName}) async {
     try {
-      final result = await _channel.invokeMethod<String>(
-        'exportModel',
-        {'format': format.name, 'fileName': fileName},
-      );
-      return result ?? '';
+      final path = await _channel.invokeMethod<String>('exportModel', {
+        'format': format.name,
+        'fileName': fileName,
+      });
+
+      return ExportResult(
+          filePath: path ?? '', isSuccess: path != null && path.isNotEmpty);
     } on PlatformException catch (e) {
       print('Error exporting model: ${e.message}');
+      return const ExportResult(filePath: '', isSuccess: false);
+    }
+  }
+
+  Future<void> setObjectScanCenter() async {
+    try {
+      await _channel.invokeMethod('setObjectScanCenter');
+    } on PlatformException catch (e) {
+      print('Error setting object scan center: ${e.message}');
       rethrow;
     }
   }
