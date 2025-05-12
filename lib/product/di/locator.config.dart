@@ -12,7 +12,9 @@
 import 'package:get_it/get_it.dart' as _i174;
 import 'package:injectable/injectable.dart' as _i526;
 
+import '../../feature/ar_physics/cubit/ar_physics_cubit.dart' as _i1;
 import '../../feature/scanner/cubit/scanner_cubit.dart' as _i556;
+import '../service/ar_service.dart' as _i2;
 import '../service/scanner_service.dart' as _i634;
 
 extension GetItInjectableX on _i174.GetIt {
@@ -27,8 +29,10 @@ extension GetItInjectableX on _i174.GetIt {
       environmentFilter,
     );
     gh.singleton<_i634.ScannerService>(() => _i634.ScannerService());
+    gh.singleton<_i2.ArService>(() => _i2.ArService());
     gh.factory<_i556.ScannerCubit>(
         () => _i556.ScannerCubit(gh<_i634.ScannerService>()));
+    gh.factory<_i1.ArPhysicsCubit>(() => _i1.ArPhysicsCubit());
     return this;
   }
 }

@@ -65,7 +65,7 @@ class _SavedScansViewState extends State<SavedScansView> with SavedScansMixin {
           title: Text(fileName),
           subtitle: Text('Path: ${file.path}'), // Show full path if needed
           onTap: () {
-            ModelViewerView(modelPath: file.path).push(context);
+            ModelViewerView().push(context);
           },
           trailing: IconButton(
             icon: const Icon(Icons.delete_outline, color: Colors.redAccent),

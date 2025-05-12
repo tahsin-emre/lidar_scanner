@@ -1,144 +1,169 @@
 import 'dart:io';
 
-import 'package:flutter/material.dart' hide Material;
-import 'package:flutter_cube/flutter_cube.dart'; // Use flutter_cube
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart'; // For temp directory
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:lidar_scanner/feature/model_viewer/mixin/model_viewer_mixin.dart';
+import 'package:model_viewer_plus/model_viewer_plus.dart';
+import 'package:path_provider/path_provider.dart';
 
-// Convert back to StatefulWidget for temp file handling
 class ModelViewerView extends StatefulWidget {
-  const ModelViewerView({
-    required this.modelPath,
-    super.key,
-  });
-  final String modelPath;
+  const ModelViewerView({super.key});
 
   @override
-  State<ModelViewerView> createState() => _ModelViewerState();
+  State<ModelViewerView> createState() => _ModelViewerViewState();
 }
 
-class _ModelViewerState extends State<ModelViewerView> {
-  // Store the future that copies the file and returns the temp path
-  late Future<String> _tempModelPathFuture;
-  String? _createdTempPath; // Store the path to delete it later
+class _ModelViewerViewState extends State<ModelViewerView>
+    with ModelViewerMixin {
+  String _selectedModel = 'sphere.gltf';
+  bool _isLoading = false;
+  String? _errorMessage;
+  String? _modelUrl;
+
+  final List<String> _availableModels = [
+    'sphere.gltf',
+    // Diğer modeller buraya eklenebilir
+  ];
 
   @override
   void initState() {
     super.initState();
-    _tempModelPathFuture = _prepareTempModelPath(widget.modelPath);
+    _loadAvailableModels();
+    _prepareModelFile(_selectedModel);
   }
 
-  Future<String> _prepareTempModelPath(String originalPath) async {
+  Future<void> _loadAvailableModels() async {
+    setState(() {
+      _isLoading = true;
+    });
+
     try {
-      final tempDir = await getTemporaryDirectory();
-      final originalFileName = p.basename(originalPath);
-      // Create a safe filename by replacing spaces
-      final safeFileName = originalFileName.replaceAll(' ', '_');
-      final tempPath = p.join(tempDir.path, safeFileName);
-
-      debugPrint('Original path: $originalPath');
-      debugPrint('Temporary path: $tempPath');
-
-      final originalFile = File(originalPath);
-      if (!await originalFile.exists()) {
-        throw Exception('Original file not found: $originalPath');
-      }
-
-      // Copy the file to the temporary path
-      final tempFile = await originalFile.copy(tempPath);
-      _createdTempPath = tempFile.path; // Store for deletion
-      debugPrint('File copied successfully to temporary path.');
-      return tempFile.path;
+      final models = await getAvailableModels();
+      setState(() {
+        if (models.isNotEmpty) {
+          _availableModels.clear();
+          _availableModels.addAll(models);
+          _selectedModel = models.first;
+          _prepareModelFile(_selectedModel);
+        }
+        _errorMessage = null;
+      });
     } catch (e) {
-      debugPrint('Error preparing temporary model path: $e');
-      rethrow;
+      setState(() {
+        _errorMessage = 'Modeller yüklenemedi: $e';
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
-  @override
-  void dispose() {
-    // Delete the temporary file when the widget is disposed
-    if (_createdTempPath != null) {
-      try {
-        File(_createdTempPath!).deleteSync();
-        debugPrint('Temporary file deleted: $_createdTempPath');
-      } catch (e) {
-        debugPrint('Error deleting temporary file: $e');
-      }
+  // Asset dosyasını geçici bir dosyaya kopyalar ve URL'ini döndürür
+  Future<void> _prepareModelFile(String modelName) async {
+    setState(() {
+      _isLoading = true;
+      _modelUrl = null;
+    });
+
+    try {
+      final url = await copyAssetToTempDir('assets/models/$modelName');
+
+      setState(() {
+        _modelUrl = url;
+        _errorMessage = null;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Model dosyası hazırlanamadı: $e';
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
-    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Point Cloud Viewer'),
+        title: const Text('3D Model Viewer'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadAvailableModels,
+            tooltip: 'Modelleri Yenile',
+          ),
+        ],
       ),
-      // Use FutureBuilder to wait for the temporary file path
-      body: FutureBuilder<String>(
-        future: _tempModelPathFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  'Error preparing model file:\n${snapshot.error}',
-                  style: const TextStyle(color: Colors.red),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            );
-          } else if (snapshot.hasData) {
-            // Temporary path is ready, build the Cube widget
-            final tempModelPath = snapshot.data!;
-            final object = Object(fileName: tempModelPath, lighting: true);
-
-            return Cube(
-              onSceneCreated: (Scene scene) {
-                scene.world.add(object);
-
-                // Convert mesh to points
-                final vertices = object.mesh.vertices;
-                final points = <Object>[];
-
-                // Create a point for each vertex
-                for (var i = 0; i < vertices.length; i += 3) {
-                  final point = Object(
-                    mesh: Mesh(
-                      vertices: [vertices[i], vertices[i + 1], vertices[i + 2]],
-                      indices: [Polygon(0, 1, 2)],
-                    ),
-                  );
-                  final material = Material()..diffuse = fromColor(Colors.blue);
-                  point.mesh.material = material;
-                  points.add(point);
+      body: Column(
+        children: [
+          // Model seçici
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: DropdownButton<String>(
+              value: _selectedModel,
+              isExpanded: true,
+              hint: const Text('Model Seç'),
+              onChanged: (String? newValue) {
+                if (newValue != null) {
+                  setState(() {
+                    _selectedModel = newValue;
+                    _errorMessage = null;
+                    _prepareModelFile(newValue);
+                  });
                 }
-
-                // Remove original object and add points
-                scene.world.remove(object);
-                for (final point in points) {
-                  scene.world.add(point);
-                }
-
-                // Adjust camera settings
-                scene.camera.position.setFrom(Vector3(0, 5, 15));
-                scene.camera.target.setFrom(Vector3(0, 0, 0));
-                scene.camera.zoom = 1.0;
-
-                // Add lighting
-                scene.light.position.setFrom(Vector3(10, 20, 10));
-                scene.light.setColor(Colors.white, 0.8, 0.4, 0.2);
               },
-            );
-          } else {
-            // Should not happen
-            return const Center(child: Text('Unknown state'));
-          }
+              items: _availableModels
+                  .map<DropdownMenuItem<String>>((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(value),
+                );
+              }).toList(),
+            ),
+          ),
+
+          // Hata mesajı
+          if (_errorMessage != null)
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                _errorMessage!,
+                style: const TextStyle(color: Colors.red),
+              ),
+            ),
+
+          // Yükleme göstergesi
+          if (_isLoading)
+            const Center(
+              child: CircularProgressIndicator(),
+            ),
+
+          // Model görüntüleyici
+          Expanded(
+            child: _modelUrl != null
+                ? ModelViewer(
+                    backgroundColor: const Color.fromARGB(255, 30, 30, 30),
+                    src: 'assets/models/sphere.gltf'!,
+                    alt: '3D Model',
+                    ar: false,
+                    autoRotate: true,
+                    cameraControls: true,
+                  )
+                : const Center(
+                    child: Text('Model yükleniyor...'),
+                  ),
+          ),
+        ],
+      ),
+      // Model hakkında bilgi gösterme butonu
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          showModelInfo(context, _selectedModel);
         },
+        child: const Icon(Icons.info),
       ),
     );
   }

@@ -44,14 +44,20 @@
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>Lidar Scanner needs access to your camera to scan your environment.</string>
+	<string>Lidar Scanner needs access to your camera to scan your environment and place AR objects.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Lidar Scanner needs access to your microphone to scan your environment.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Lidar Scanner needs access to your location to scan your environment.</string>
+	<string>Lidar Scanner needs access to your location to scan your environment and place AR objects.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>io.flutter.embedded_views_preview</key>
 	<true/>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Lidar Scanner needs access to your photo library to save AR screenshots.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Lidar Scanner needs access to your photo library to save AR screenshots.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>Lidar Scanner needs access to your device motion to provide accurate AR experiences.</string>
 	</dict>
 </plist>

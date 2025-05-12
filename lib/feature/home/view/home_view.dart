@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:lidar_scanner/feature/ar_physics/view/ar_physics_view.dart';
 import 'package:lidar_scanner/feature/home/mixin/home_mixin.dart';
+import 'package:lidar_scanner/feature/model_viewer/view/model_viewer_view.dart';
 import 'package:lidar_scanner/feature/saved_scans/view/saved_scans_view.dart';
 import 'package:lidar_scanner/product/utils/extensions/widget_ext.dart';
 
@@ -27,6 +29,20 @@ class _HomeViewState extends State<HomeView> with HomeMixin {
             icon: Icons.bedroom_parent,
             label: 'Scan Room',
             onTap: pushToScanner,
+          ).sliver(),
+          _StartScanButton(
+            icon: Icons.sports_volleyball,
+            label: 'AR Physics',
+            onTap: () {
+              const ArPhysicsView().push(context);
+            },
+          ).sliver(),
+          _StartScanButton(
+            icon: Icons.view_in_ar,
+            label: '3D Model Viewer',
+            onTap: () {
+              const ModelViewerView().push(context);
+            },
           ).sliver(),
           _ViewSavedScansButton(() {
             const SavedScansView().push(context);

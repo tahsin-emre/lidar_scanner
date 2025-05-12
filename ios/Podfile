@@ -1,5 +1,5 @@
 # Uncomment this line to define a global platform for your project
-# platform :ios, '12.0'
+platform :ios, '14.5'
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
@@ -42,6 +42,9 @@ post_install do |installer|
 
     # Added for permission_handler configuration
     target.build_configurations.each do |config|
+      # Minimum iOS version için 14.5 olarak ayarla
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '14.5'
+      
       # You can remove unused permissions here by setting them to 0
       # for more information: https://github.com/Baseflow/flutter-permission-handler/blob/main/permission_handler_apple/ios/Classes/PermissionHandlerEnums.h
       config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [
