@@ -31,7 +31,7 @@ class _ScannerViewState extends State<ScannerView> with ScannerMixin {
           IconButton(
             onPressed: changeScanQuality,
             icon: Icon(scanQualityIcon),
-            tooltip: 'Tarama Kalitesi: ${scanQuality.name}',
+            tooltip: 'Scan Quality: ${scanQuality.name}',
           ),
         ],
       ),
@@ -67,6 +67,7 @@ class _ScannerViewState extends State<ScannerView> with ScannerMixin {
               if (state.missingAreas.isNotEmpty)
                 _MissingAreasOverlay(areas: state.missingAreas),
             ],
+            if (state.isEntertainmentModeActive) _buildEntertainmentControls(),
           ],
         );
       },
@@ -81,6 +82,10 @@ class _ScannerViewState extends State<ScannerView> with ScannerMixin {
       child: BlocBuilder<ScannerCubit, ScannerState>(
         bloc: scannerCubit,
         builder: (context, state) {
+          if (state.isEntertainmentModeActive) {
+            return const SizedBox.shrink();
+          }
+
           return Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
@@ -88,10 +93,9 @@ class _ScannerViewState extends State<ScannerView> with ScannerMixin {
                 FloatingActionButton(
                   heroTag: 'export_fab',
                   onPressed: () async {
-                    // Show dialog to get filename
                     final fileName = await _showFileNameDialog(context);
                     if (fileName == null || fileName.isEmpty) {
-                      return; // User cancelled or entered empty name
+                      return;
                     }
 
                     try {
@@ -121,6 +125,23 @@ class _ScannerViewState extends State<ScannerView> with ScannerMixin {
                     }
                   },
                   child: const Icon(Icons.save_alt),
+                ),
+                const SizedBox(width: 16),
+                FloatingActionButton(
+                  heroTag: 'entertainment_fab',
+                  backgroundColor: Colors.amber,
+                  onPressed: () async {
+                    final shouldProceed = await _showConfirmationDialog(
+                        context,
+                        'Save Scan & Enter Entertainment Mode',
+                        'This will save the current scan and enter entertainment mode. Continue?');
+
+                    if (shouldProceed == true) {
+                      await scannerCubit.startEntertainmentModeWithSavedScan();
+                    }
+                  },
+                  child: const Icon(Icons.celebration),
+                  tooltip: 'Save & Enter Entertainment Mode',
                 ),
                 const SizedBox(width: 16),
               ],
@@ -160,7 +181,7 @@ class _ScannerViewState extends State<ScannerView> with ScannerMixin {
                 ),
               ),
               child: const Text(
-                'Hedef Nesneyi Ayarla',
+                'Set Target Object',
                 style: TextStyle(fontSize: 16),
               ),
             );
@@ -182,7 +203,6 @@ class _ScannerViewState extends State<ScannerView> with ScannerMixin {
     }
   }
 
-  // Helper function to show the filename dialog
   Future<String?> _showFileNameDialog(BuildContext context) async {
     final controller = TextEditingController();
     return showDialog<String>(
@@ -200,7 +220,7 @@ class _ScannerViewState extends State<ScannerView> with ScannerMixin {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(), // Cancel
+              onPressed: () => Navigator.of(context).pop(),
               child: const Text('Cancel'),
             ),
             TextButton(
@@ -209,7 +229,6 @@ class _ScannerViewState extends State<ScannerView> with ScannerMixin {
                 if (name.isNotEmpty) {
                   Navigator.of(context).pop(name);
                 } else {
-                  // Optional: Show error if name is empty
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('File name cannot be empty')),
                   );
@@ -220,6 +239,105 @@ class _ScannerViewState extends State<ScannerView> with ScannerMixin {
           ],
         );
       },
+    );
+  }
+
+  Future<bool?> _showConfirmationDialog(
+      BuildContext context, String title, String message) {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(title),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Continue'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildEntertainmentControls() {
+    return Positioned(
+      top: 16,
+      left: 16,
+      right: 16,
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.amber.withOpacity(0.8),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.celebration, color: Colors.white),
+                SizedBox(width: 8),
+                Text(
+                  'Entertainment Mode Active',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ElevatedButton.icon(
+                onPressed: () {
+                  scannerCubit.spawnEntertainmentObject(
+                    assetName: 'coin',
+                    properties: {'continuous': true},
+                  );
+                },
+                icon: const Icon(Icons.money),
+                label: const Text('Make It Rain'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.amber,
+                  foregroundColor: Colors.white,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              ElevatedButton.icon(
+                onPressed: () {
+                  scannerCubit.toggleEntertainmentMode();
+                },
+                icon: const Icon(Icons.exit_to_app),
+                label: const Text('Exit'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -244,7 +362,6 @@ final class _Body extends StatelessWidget {
   }
 
   static void _onPlatformViewCreated(int id) {
-    // Platform view created callback
     debugPrint('Platform view created with id: $id');
   }
 }

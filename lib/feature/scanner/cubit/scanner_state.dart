@@ -8,6 +8,7 @@ class ScannerState extends Equatable {
     this.scanProgress = 0.0,
     this.isComplete = false,
     this.missingAreas = const [],
+    this.isEntertainmentModeActive = false,
   });
 
   ScannerState copyWith({
@@ -16,6 +17,7 @@ class ScannerState extends Equatable {
     double? scanProgress,
     bool? isComplete,
     List<ScanArea>? missingAreas,
+    bool? isEntertainmentModeActive,
   }) {
     return ScannerState(
       canScan: canScan ?? this.canScan,
@@ -23,6 +25,8 @@ class ScannerState extends Equatable {
       scanProgress: scanProgress ?? this.scanProgress,
       isComplete: isComplete ?? this.isComplete,
       missingAreas: missingAreas ?? this.missingAreas,
+      isEntertainmentModeActive:
+          isEntertainmentModeActive ?? this.isEntertainmentModeActive,
     );
   }
 
@@ -31,8 +35,15 @@ class ScannerState extends Equatable {
   final double scanProgress;
   final bool isComplete;
   final List<ScanArea> missingAreas;
+  final bool isEntertainmentModeActive;
 
   @override
-  List<Object?> get props =>
-      [canScan, isScanning, scanProgress, isComplete, missingAreas];
+  List<Object?> get props => [
+        canScan,
+        isScanning,
+        scanProgress,
+        isComplete,
+        missingAreas,
+        isEntertainmentModeActive
+      ];
 }

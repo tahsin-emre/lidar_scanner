@@ -42,6 +42,20 @@ import ARKit // Import ARKit
           }
         case "setObjectScanCenter":
           self.setObjectScanCenter(result: result)
+        case "saveScanData":
+          self.saveScanData(result: result)
+        case "startEntertainmentMode":
+          self.startEntertainmentMode(result: result)
+        case "stopEntertainmentMode":
+          self.stopEntertainmentMode(result: result)
+        case "spawnObjectInEntertainmentMode":
+          if let args = call.arguments as? [String: Any],
+             let assetName = args["assetName"] as? String {
+            let properties = args["properties"] as? [String: Any]
+            self.spawnObjectInEntertainmentMode(assetName: assetName, properties: properties, result: result)
+          } else {
+            result(FlutterError(code: "INVALID_ARGS", message: "Missing assetName for spawnObjectInEntertainmentMode", details: nil))
+          }
         default:
           result(FlutterMethodNotImplemented)
       }
@@ -88,6 +102,22 @@ import ARKit // Import ARKit
       result(nil) // Indicate success
   }
 
+  // New method to save current scan data for entertainment mode
+  private func saveScanData(result: FlutterResult) {
+      print("AppDelegate: Saving current scan data for entertainment mode")
+      guard let scannerView = activeScannerView else {
+          result(FlutterError(code: "NO_ACTIVE_VIEW", message: "Scanner view is not available.", details: nil))
+          return
+      }
+      
+      let success = scannerView.saveScanData()
+      if success {
+          result(true)
+      } else {
+          result(FlutterError(code: "SAVE_FAILED", message: "Failed to save scan data. Make sure scanning has been performed.", details: nil))
+      }
+  }
+
   private func stopScanning(result: FlutterResult) {
       print("AppDelegate: Delegating stopScanning to active view")
       guard let scannerView = activeScannerView else {
@@ -126,5 +156,46 @@ import ARKit // Import ARKit
       }
       scannerView.setObjectScanCenter()
       result(nil) // Indicate success
+  }
+
+  // MARK: - Entertainment Mode Methods
+
+  private func startEntertainmentMode(result: FlutterResult) {
+    print("AppDelegate: Attempting to start Entertainment Mode")
+    
+    // Better debugging
+    if activeScannerView == nil {
+      print("ERROR: activeScannerView is nil! The platform view has not been created yet.")
+      print("The Flutter UiKitView may not have been initialized properly.")
+    }
+    
+    guard let scannerView = activeScannerView else {
+      result(FlutterError(code: "NO_ACTIVE_VIEW", message: "Scanner view is not available.", details: nil))
+      return
+    }
+    
+    print("AppDelegate: ScannerView is available, starting entertainment mode")
+    scannerView.startEntertainmentMode()
+    result(nil) // Indicate success
+  }
+
+  private func stopEntertainmentMode(result: FlutterResult) {
+    print("AppDelegate: Delegating stopEntertainmentMode to active view")
+    guard let scannerView = activeScannerView else {
+      result(FlutterError(code: "NO_ACTIVE_VIEW", message: "Scanner view is not available.", details: nil))
+      return
+    }
+    scannerView.stopEntertainmentMode()
+    result(nil) // Indicate success
+  }
+
+  private func spawnObjectInEntertainmentMode(assetName: String, properties: [String: Any]?, result: FlutterResult) {
+    print("AppDelegate: Delegating spawnObjectInEntertainmentMode to active view with asset: \(assetName)")
+    guard let scannerView = activeScannerView else {
+      result(FlutterError(code: "NO_ACTIVE_VIEW", message: "Scanner view is not available.", details: nil))
+      return
+    }
+    scannerView.spawnObjectInEntertainmentMode(assetName: assetName, properties: properties)
+    result(nil) // Indicate success
   }
 }

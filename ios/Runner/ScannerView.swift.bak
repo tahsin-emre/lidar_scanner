@@ -51,6 +51,8 @@ class EntertainmentSystem: NSObject, SCNPhysicsContactDelegate {
     
     // Create the environment from mesh anchors
     private func createEnvironmentFromMeshes(_ meshAnchors: [ARMeshAnchor]) {
+        print("Creating environment from \(meshAnchors.count) mesh anchors")
+        
         for (index, meshAnchor) in meshAnchors.enumerated() {
             // Create optimized geometry
             let geometry = SCNGeometry(arGeometry: meshAnchor.geometry)
@@ -69,22 +71,21 @@ class EntertainmentSystem: NSObject, SCNPhysicsContactDelegate {
             meshNode.name = "environment_mesh_\(index)"
             meshNode.simdTransform = meshAnchor.transform
             
-            // Create a compound physics shape for better performance and accuracy
+            // Create a physics shape with improved physics options
             let physicsShape = SCNPhysicsShape(
                 geometry: geometry,
                 options: [
-                    SCNPhysicsShape.Option.type: SCNPhysicsShape.ShapeType.concavePolyhedron,
                     SCNPhysicsShape.Option.keepAsCompound: true,
-                    SCNPhysicsShape.Option.collisionMargin: 0.01
+                    SCNPhysicsShape.Option.collisionMargin: 0.005
                 ]
             )
             
-            // Set up physics body
+            // Set up physics body with better properties for object stability
             let physicsBody = SCNPhysicsBody(type: .static, shape: physicsShape)
             physicsBody.isAffectedByGravity = false
-            physicsBody.friction = 0.5
-            physicsBody.restitution = 0.3
-            physicsBody.rollingFriction = 0.5
+            physicsBody.friction = 0.8         // Higher friction to prevent sliding
+            physicsBody.restitution = 0.2      // Lower restitution for less bouncing
+            physicsBody.rollingFriction = 0.8  // Higher to prevent rolling
             physicsBody.categoryBitMask = categoryBitMaskEnvironment
             physicsBody.collisionBitMask = categoryBitMaskDynamicObjects
             physicsBody.contactTestBitMask = categoryBitMaskDynamicObjects
@@ -94,28 +95,37 @@ class EntertainmentSystem: NSObject, SCNPhysicsContactDelegate {
             // Add to the scene
             arView.scene.rootNode.addChildNode(meshNode)
             meshNodes.append(meshNode)
+            
+            print("Added mesh \(index) with \(meshAnchor.geometry.vertices.count) vertices")
         }
         
         // Add a virtual ground plane as safety
         createSafetyGround()
+        
+        // Calculate world bounds for spawning
+        calculateWorldBounds(from: meshAnchors)
     }
     
     // Create a safety ground plane below the scene
     private func createSafetyGround() {
+        print("Creating safety ground plane")
+        
         let minY = worldBounds?.min.y ?? -0.5
         
-        let planeGeometry = SCNPlane(width: 50.0, height: 50.0)
+        // Create a larger safety plane to ensure objects don't fall through
+        let planeGeometry = SCNPlane(width: 100.0, height: 100.0) // Much larger area
         let material = SCNMaterial()
-        material.diffuse.contents = UIColor.clear
+        material.diffuse.contents = UIColor(red: 0.1, green: 0.1, blue: 0.1, alpha: 0.05) // Slightly visible for debugging
         planeGeometry.materials = [material]
         
         let planeNode = SCNNode(geometry: planeGeometry)
         planeNode.name = "safety_ground"
         
-        // Position it below the lowest detected surface
-        let groundY = minY - 0.1
+        // Position it just below the lowest detected surface
+        let groundY = minY - 0.05 // Just 5cm below lowest point
         if let cameraPos = arView.pointOfView?.position {
             planeNode.position = SCNVector3(cameraPos.x, groundY, cameraPos.z)
+            print("Placed safety ground at y = \(groundY), below minimum y = \(minY)")
         } else {
             planeNode.position = SCNVector3(0, groundY, 0)
         }
@@ -123,17 +133,20 @@ class EntertainmentSystem: NSObject, SCNPhysicsContactDelegate {
         // Rotate to horizontal
         planeNode.eulerAngles.x = -.pi / 2
         
-        // Set up physics
+        // Set up improved physics for the ground
         let physicsShape = SCNPhysicsShape(geometry: planeGeometry, options: nil)
         planeNode.physicsBody = SCNPhysicsBody(type: .static, shape: physicsShape)
-        planeNode.physicsBody?.friction = 0.5
-        planeNode.physicsBody?.restitution = 0.3
+        planeNode.physicsBody?.friction = 0.9       // Very high friction
+        planeNode.physicsBody?.restitution = 0.1    // Very low bounce
+        planeNode.physicsBody?.rollingFriction = 0.9 // High rolling friction
         planeNode.physicsBody?.categoryBitMask = categoryBitMaskEnvironment
         planeNode.physicsBody?.collisionBitMask = categoryBitMaskDynamicObjects
         
         // Add to scene
         arView.scene.rootNode.addChildNode(planeNode)
         meshNodes.append(planeNode)
+        
+        print("Safety ground plane created")
     }
     
     // Calculate world bounds from mesh anchors
@@ -246,15 +259,17 @@ class EntertainmentSystem: NSObject, SCNPhysicsContactDelegate {
     
     // Create a coin object
     private func createCoin() {
-        // Create geometry
-        let coinGeometry = SCNCylinder(radius: 0.03, height: 0.005)
+        // Create geometry - make coins slightly larger
+        let coinGeometry = SCNCylinder(radius: 0.04, height: 0.007)
         
-        // Create material
+        // Create material with more vibrant color
         let material = SCNMaterial()
-        material.diffuse.contents = UIColor(red: 0.85, green: 0.65, blue: 0.13, alpha: 1.0) // Gold
+        material.diffuse.contents = UIColor(red: 1.0, green: 0.84, blue: 0.0, alpha: 1.0) // More vibrant gold
         material.specular.contents = UIColor.white
         material.shininess = 1.0
         material.lightingModel = .physicallyBased
+        material.metalness.contents = 0.8 // More metallic look
+        material.roughness.contents = 0.2 // Less rough = more shiny
         coinGeometry.materials = [material]
         
         // Create node
@@ -273,36 +288,35 @@ class EntertainmentSystem: NSObject, SCNPhysicsContactDelegate {
         let physicsShape = SCNPhysicsShape(
             geometry: coinGeometry,
             options: [
-                SCNPhysicsShape.Option.type: SCNPhysicsShape.ShapeType.convexHull,
                 SCNPhysicsShape.Option.collisionMargin: 0.001
             ]
         )
         
-        // Set up physics body
+        // Set up physics body with improved stability
         let physicsBody = SCNPhysicsBody(type: .dynamic, shape: physicsShape)
-        physicsBody.mass = 0.08
-        physicsBody.restitution = 0.2
-        physicsBody.friction = 0.7
-        physicsBody.rollingFriction = 0.6
-        physicsBody.angularDamping = 0.8
-        physicsBody.damping = 0.5
+        physicsBody.mass = 0.1      // Slightly heavier
+        physicsBody.restitution = 0.15  // Less bouncy
+        physicsBody.friction = 0.8   // More friction 
+        physicsBody.rollingFriction = 0.7  // Less rolling
+        physicsBody.angularDamping = 0.9  // Quickly stop rotation
+        physicsBody.damping = 0.7        // Quickly slow down
         physicsBody.isAffectedByGravity = true
         physicsBody.categoryBitMask = categoryBitMaskDynamicObjects
         physicsBody.collisionBitMask = categoryBitMaskEnvironment | categoryBitMaskDynamicObjects
         physicsBody.contactTestBitMask = categoryBitMaskEnvironment
         
-        // Add initial physics
+        // Reduced initial velocities for more controlled movement
         physicsBody.velocity = SCNVector3(
-            Float.random(in: -0.1...0.1),
             Float.random(in: -0.05...0.05),
-            Float.random(in: -0.1...0.1)
+            Float.random(in: -0.02...0.02),
+            Float.random(in: -0.05...0.05)
         )
         
         physicsBody.angularVelocity = SCNVector4(
-            Float.random(in: -0.5...0.5),
-            Float.random(in: -0.5...0.5),
-            Float.random(in: -0.5...0.5),
-            Float.random(in: 0...5)
+            Float.random(in: -0.2...0.2),
+            Float.random(in: -0.2...0.2),
+            Float.random(in: -0.2...0.2),
+            Float.random(in: 0...2)
         )
         
         coinNode.physicsBody = physicsBody
@@ -310,6 +324,8 @@ class EntertainmentSystem: NSObject, SCNPhysicsContactDelegate {
         // Add to scene
         arView.scene.rootNode.addChildNode(coinNode)
         objectNodes.append(coinNode)
+        
+        print("Coin created at \(spawnPosition)")
     }
     
     // Create a ball object
@@ -452,22 +468,30 @@ class EntertainmentSystem: NSObject, SCNPhysicsContactDelegate {
         guard let bounds = worldBounds else {
             // Fallback position if bounds not calculated
             if let camera = arView.pointOfView {
+                print("Warning: No world bounds, using camera-based spawn position")
                 return SCNVector3(
-                    camera.position.x + Float.random(in: -1...1),
-                    camera.position.y + 1.0,
-                    camera.position.z + Float.random(in: -1...1)
+                    camera.position.x + Float.random(in: -0.5...0.5),
+                    camera.position.y + 0.8, // Higher above camera
+                    camera.position.z + Float.random(in: -0.5...0.5)
                 )
             }
             return SCNVector3(0, 1, 0)
         }
         
-        // Random X and Z within bounds
-        let x = Float.random(in: bounds.min.x...bounds.max.x)
-        let z = Float.random(in: bounds.min.z...bounds.max.z)
+        // Slightly reduce the X and Z range to keep objects more centered
+        let marginPercentage: Float = 0.2 // Keep objects 20% inside the bounds perimeter
+        let xRange = bounds.min.x + (bounds.max.x - bounds.min.x) * marginPercentage...bounds.max.x - (bounds.max.x - bounds.min.x) * marginPercentage
+        let zRange = bounds.min.z + (bounds.max.z - bounds.min.z) * marginPercentage...bounds.max.z - (bounds.max.z - bounds.min.z) * marginPercentage
         
-        // Height above the highest point
-        let y = bounds.max.y + Float.random(in: 0.5...1.0)
+        // Random X and Z within the adjusted bounds
+        let x = Float.random(in: xRange)
+        let z = Float.random(in: zRange)
         
+        // Calculate a more appropriate height - higher spawn point for better visibility
+        let heightRange = bounds.max.y + 0.5...bounds.max.y + 0.8
+        let y = Float.random(in: heightRange)
+        
+        print("Spawning at position: (\(x), \(y), \(z)) above bounds height \(bounds.max.y)")
         return SCNVector3(x, y, z)
     }
     
@@ -632,7 +656,7 @@ class ScannerView: NSObject, FlutterPlatformView, ARSCNViewDelegate, ARSessionDe
     // Add these properties to store scanned mesh data
     private var savedMeshAnchors: [ARMeshAnchor] = []
     private var isMeshDataSaved = false
-    
+
     init(
         frame: CGRect,
         viewIdentifier viewId: Int64,
@@ -650,22 +674,20 @@ class ScannerView: NSObject, FlutterPlatformView, ARSCNViewDelegate, ARSessionDe
     }
     
     private func setupDefaultConfiguration() {
-        // Tarama için ARWorldTrackingConfiguration kurulumu
         if ARWorldTrackingConfiguration.supportsSceneReconstruction(.mesh) {
             configuration.sceneReconstruction = .mesh
-            print("LiDAR mesh rekonstruksiyonu aktif.")
         } else {
-            print("Cihaz LiDAR mesh rekonstruksiyonunu desteklemiyor.")
+            print("Device does not support LiDAR mesh reconstruction.")
             return
         }
         
-        // Yatay ve dikey düzlem algılama
+        // More aggressive plane detection, especially for horizontal surfaces
         configuration.planeDetection = [.horizontal, .vertical]
         
-        // Otomatik çevre dokusu
+        // Enable more detailed environment texturing to better see surfaces
         configuration.environmentTexturing = .automatic
         
-        // Aydınlatma kurulumu
+        // Add lighting to the scene
         setupLighting()
     }
     
@@ -1289,13 +1311,52 @@ class ScannerView: NSObject, FlutterPlatformView, ARSCNViewDelegate, ARSessionDe
             if currentscanType == "objectScan" && !isEntertainmentModeActive && !isAnchorWithinObjectBounds(meshAnchor) {
                 return nil // Don't create a node for this anchor
             }
-
-            // Create mesh node using the simplified approach
-            let node = createNodeFromMesh(meshAnchor: meshAnchor)
+            
+            // Create a SCNGeometry from the mesh anchor's geometry
+            let geometry = SCNGeometry(arGeometry: meshAnchor.geometry)
+            
+            // Create a node to hold the geometry
+            let node = SCNNode(geometry: geometry)
+            
+            // Set visual appearance (for scanning mode)
+            if !isEntertainmentModeActive {
+                // Always use wireframe for visualization in scanning mode
+                let material = SCNMaterial()
+                material.diffuse.contents = UIColor.white
+                material.isDoubleSided = true
+                material.fillMode = .lines
+                
+                // High quality gets thinner lines for better visual
+                if currentscanQuality == "highQuality" {
+                    // Thinner lines for high quality - use semi-transparent white
+                    material.diffuse.contents = UIColor(white: 1.0, alpha: 0.8)
+                } else {
+                    // Thicker lines for low quality - use solid white
+                    material.diffuse.contents = UIColor(white: 1.0, alpha: 1.0)
+                }
+                
+                // Apply the material
+                geometry.firstMaterial = material
+            } else {
+                // For entertainment mode, make the mesh completely invisible
+                let invisibleMaterial = SCNMaterial()
+                invisibleMaterial.diffuse.contents = UIColor.clear
+                invisibleMaterial.transparency = 0.0 // Completely transparent
+                invisibleMaterial.writesToDepthBuffer = false // Don't write to depth buffer
+                invisibleMaterial.readsFromDepthBuffer = false // Don't read from depth buffer
+                geometry.firstMaterial = invisibleMaterial
+                
+                print("Entertainment mode: Applied invisible material to mesh")
+            }
+            
+            // Add physics to mesh regardless of visibility
+            if isEntertainmentModeActive {
+                setupPhysicsForMesh(node: node, meshAnchor: meshAnchor)
+            }
             
             // Store reference to the node for later physics interactions
             planeNodes[meshAnchor.identifier] = node
-        
+            
             return node
         } else if let planeAnchor = anchor as? ARPlaneAnchor {
             // Handle plane anchors for visualization and physics
@@ -1323,70 +1384,6 @@ class ScannerView: NSObject, FlutterPlatformView, ARSCNViewDelegate, ARSessionDe
         // For other anchor types, or if not in entertainment mode, return a default node
         return SCNNode()
     }
-    
-    // Create a node from mesh anchor with appropriate visual and physics properties
-    private func createNodeFromMesh(meshAnchor: ARMeshAnchor) -> SCNNode {
-        // Create optimized geometry
-        let geometry = SCNGeometry(arGeometry: meshAnchor.geometry)
-        
-        // Create node for the mesh
-        let meshNode = SCNNode(geometry: geometry)
-        meshNode.name = "mesh_\(meshAnchor.identifier.uuidString)"
-        meshNode.simdTransform = meshAnchor.transform
-        
-        // Configure appearance based on mode
-        if !isEntertainmentModeActive {
-            // Scanning mode - visible wireframe
-            let material = SCNMaterial()
-            material.diffuse.contents = UIColor.white
-            material.isDoubleSided = true
-            material.fillMode = .lines
-            
-            // High quality gets thinner lines for better visual
-            if currentscanQuality == "highQuality" {
-                // Thinner lines for high quality - use semi-transparent white
-                material.diffuse.contents = UIColor(white: 1.0, alpha: 0.8)
-            } else {
-                // Thicker lines for low quality - use solid white
-                material.diffuse.contents = UIColor(white: 1.0, alpha: 1.0)
-            }
-            
-            // Apply the material
-            geometry.firstMaterial = material
-        } else {
-            // Entertainment mode - invisible but physically present
-            let invisibleMaterial = SCNMaterial()
-            invisibleMaterial.diffuse.contents = UIColor.clear
-            invisibleMaterial.transparency = 0.0 // Completely transparent
-            invisibleMaterial.writesToDepthBuffer = true
-            invisibleMaterial.readsFromDepthBuffer = true
-            geometry.firstMaterial = invisibleMaterial
-            
-            // Add physics for entertainment mode
-            let physicsShape = SCNPhysicsShape(
-                geometry: geometry,
-                options: [
-                    SCNPhysicsShape.Option.type: SCNPhysicsShape.ShapeType.concavePolyhedron,
-                    SCNPhysicsShape.Option.keepAsCompound: true,
-                    SCNPhysicsShape.Option.collisionMargin: 0.01
-                ]
-            )
-            
-            // Set up physics body
-            let physicsBody = SCNPhysicsBody(type: .static, shape: physicsShape)
-            physicsBody.isAffectedByGravity = false
-            physicsBody.friction = 0.7
-            physicsBody.restitution = 0.2
-            physicsBody.rollingFriction = 0.5
-            physicsBody.categoryBitMask = 1 // Environment
-            physicsBody.collisionBitMask = 2 // Dynamic objects
-            physicsBody.contactTestBitMask = 2
-            
-            meshNode.physicsBody = physicsBody
-        }
-        
-        return meshNode
-    }
 
     // This method is called when an existing ARAnchor is updated
     func renderer(_ renderer: SCNSceneRenderer, didUpdate node: SCNNode, for anchor: ARAnchor) {
@@ -1405,29 +1402,29 @@ class ScannerView: NSObject, FlutterPlatformView, ARSCNViewDelegate, ARSessionDe
                 newGeometry.firstMaterial = invisibleMaterial
                 
                 // Update node geometry (required for updated physics)
-        node.geometry = newGeometry
-        
+                node.geometry = newGeometry
+                
                 // Update the physics shape to match the updated mesh
                 updatePhysicsForMesh(meshNode: node, meshAnchor: meshAnchor)
                 
                 print("Updated entertainment mode mesh: \(meshAnchor.identifier)")
-        } else {
+            } else {
                 // Standard scanning behavior with visible wireframe
                 // Update node geometry (required for visualization)
                 node.geometry = newGeometry
                 
                 // Apply standard visual material (wireframe)
-            let material = SCNMaterial()
-            material.diffuse.contents = UIColor.white
-            material.isDoubleSided = true
-            material.fillMode = .lines
-            
-            // High quality gets thinner lines
-            if currentscanQuality == "highQuality" {
-                material.diffuse.contents = UIColor(white: 1.0, alpha: 0.8)
-            }
-            
-            node.geometry?.firstMaterial = material
+                let material = SCNMaterial()
+                material.diffuse.contents = UIColor.white
+                material.isDoubleSided = true
+                material.fillMode = .lines
+                
+                // High quality gets thinner lines
+                if currentscanQuality == "highQuality" {
+                    material.diffuse.contents = UIColor(white: 1.0, alpha: 0.8)
+                }
+                
+                node.geometry?.firstMaterial = material
             }
         } else if let planeAnchor = anchor as? ARPlaneAnchor {
             // Update planes with new geometry
@@ -1483,7 +1480,7 @@ class ScannerView: NSObject, FlutterPlatformView, ARSCNViewDelegate, ARSessionDe
             plane.height = CGFloat(anchor.extent.z)
         }
     }
-    
+
     // This function processes mesh data for high quality in the background
     // It doesn't affect visualization but ensures we capture more detail
     private func processMeshDataForHighQuality(_ meshAnchor: ARMeshAnchor) {
@@ -1885,35 +1882,20 @@ class ScannerView: NSObject, FlutterPlatformView, ARSCNViewDelegate, ARSessionDe
     
     private func updatePhysicsForMesh(meshNode: SCNNode, meshAnchor: ARMeshAnchor) {
         // If the mesh geometry has been updated, update the physics body
-        let updatedGeometry = SCNGeometry(arGeometry: meshAnchor.geometry)
-        meshNode.geometry = updatedGeometry
+        guard let geometry = meshNode.geometry else { return }
         
-        // Create invisible but physically present material
-        let invisibleMaterial = SCNMaterial()
-        invisibleMaterial.diffuse.contents = UIColor.clear
-        invisibleMaterial.transparency = 0.0 // Completely transparent
-        invisibleMaterial.writesToDepthBuffer = true
-        invisibleMaterial.readsFromDepthBuffer = true
-        updatedGeometry.firstMaterial = invisibleMaterial
+        let updatedShape = SCNPhysicsShape(geometry: geometry, options: [
+            SCNPhysicsShape.Option.type: SCNPhysicsShape.ShapeType.concavePolyhedron,
+            SCNPhysicsShape.Option.keepAsCompound: true,
+            SCNPhysicsShape.Option.collisionMargin: 0.01
+        ])
         
-        // Create an updated physics shape
-        let updatedShape = SCNPhysicsShape(
-            geometry: updatedGeometry,
-            options: [
-                SCNPhysicsShape.Option.type: SCNPhysicsShape.ShapeType.concavePolyhedron,
-                SCNPhysicsShape.Option.keepAsCompound: true,
-                SCNPhysicsShape.Option.collisionMargin: 0.01
-            ]
-        )
-        
-        // Update the physics body
         meshNode.physicsBody = SCNPhysicsBody(type: .static, shape: updatedShape)
         meshNode.physicsBody?.friction = 0.7
-        meshNode.physicsBody?.restitution = 0.2
+        meshNode.physicsBody?.restitution = 0.3
         meshNode.physicsBody?.rollingFriction = 0.5
         meshNode.physicsBody?.categoryBitMask = 1   // Category for environment
-        meshNode.physicsBody?.collisionBitMask = 2  // Test contacts with dynamic objects
-        meshNode.physicsBody?.contactTestBitMask = 2
+        meshNode.physicsBody?.contactTestBitMask = 2 // Test contacts with coins
     }
 
     // Add a virtual ground plane to ensure coins don't fall into infinity
@@ -2221,6 +2203,33 @@ class ScannerView: NSObject, FlutterPlatformView, ARSCNViewDelegate, ARSessionDe
         return true
     }
     
+    // Add a new debug helper method
+    private func printMeshDebugInfo() {
+        print("=== MESH DEBUG INFO ===")
+        
+        if let bounds = worldBounds {
+            print("World bounds: min(\(bounds.min.x), \(bounds.min.y), \(bounds.min.z)), max(\(bounds.max.x), \(bounds.max.y), \(bounds.max.z))")
+            print("World dimensions: width: \(bounds.max.x - bounds.min.x)m, height: \(bounds.max.y - bounds.min.y)m, depth: \(bounds.max.z - bounds.min.z)m")
+        } else {
+            print("World bounds not calculated!")
+        }
+        
+        var totalVertices = 0
+        for (i, meshAnchor) in savedMeshAnchors.enumerated() {
+            let vertexCount = meshAnchor.geometry.vertices.count
+            totalVertices += vertexCount
+            let center = simd_make_float3(meshAnchor.transform.columns.3)
+            
+            // Only print first 5 meshes to avoid log spam
+            if i < 5 {
+                print("Mesh \(i): \(vertexCount) vertices, center at (\(center.x), \(center.y), \(center.z))")
+            }
+        }
+        
+        print("Total meshes: \(savedMeshAnchors.count) with \(totalVertices) vertices")
+        print("======================")
+    }
+    
     // Helper method to check if a mesh is likely a horizontal surface
     private func isHorizontalSurface(_ geometry: ARMeshGeometry) -> Bool {
         let normals = geometry.normals
@@ -2374,30 +2383,11 @@ class ScannerView: NSObject, FlutterPlatformView, ARSCNViewDelegate, ARSessionDe
 @available(iOS 13.4, *)
 extension SCNGeometry {
     convenience init(arGeometry: ARMeshGeometry) {
-        let vertices = arGeometry.vertices
-        let normals = arGeometry.normals
-        let faces = arGeometry.faces
-        
-        let vertexSource = SCNGeometrySource(buffer: vertices.buffer,
-                                             vertexFormat: vertices.format,
-                                             semantic: .vertex,
-                                             vertexCount: vertices.count,
-                                             dataOffset: vertices.offset,
-                                             dataStride: vertices.stride)
-        
-        let normalSource = SCNGeometrySource(buffer: normals.buffer,
-                                             vertexFormat: normals.format,
-                                             semantic: .normal,
-                                             vertexCount: normals.count,
-                                             dataOffset: normals.offset,
-                                             dataStride: normals.stride)
-        
-        let indexElement = SCNGeometryElement(buffer: faces.buffer, 
-                                              primitiveType: SCNGeometryPrimitiveType(arPrimitiveType: faces.primitiveType)!,
-                                              primitiveCount: faces.count,
-                                              bytesPerIndex: faces.bytesPerIndex)
-        
-        self.init(sources: [vertexSource, normalSource], elements: [indexElement])
+        let verticesSource = SCNGeometrySource(buffer: arGeometry.vertices.buffer, vertexFormat: arGeometry.vertices.format, semantic: .vertex, vertexCount: arGeometry.vertices.count, dataOffset: arGeometry.vertices.offset, dataStride: arGeometry.vertices.stride)
+        let normalsSource = SCNGeometrySource(buffer: arGeometry.normals.buffer, vertexFormat: arGeometry.normals.format, semantic: .normal, vertexCount: arGeometry.normals.count, dataOffset: arGeometry.normals.offset, dataStride: arGeometry.normals.stride)
+        let facesElement = SCNGeometryElement(buffer: arGeometry.faces.buffer, primitiveType: SCNGeometryPrimitiveType(arPrimitiveType: arGeometry.faces.primitiveType)!, primitiveCount: arGeometry.faces.count, bytesPerIndex: arGeometry.faces.bytesPerIndex)
+
+        self.init(sources: [verticesSource, normalsSource], elements: [facesElement])
     }
 }
 

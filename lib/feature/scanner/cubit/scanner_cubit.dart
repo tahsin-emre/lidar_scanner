@@ -62,4 +62,73 @@ final class ScannerCubit extends Cubit<ScannerState> {
       await _service.setObjectScanCenter();
     }
   }
+
+  // --- Entertainment Mode Cubit Methods ---
+  Future<void> toggleEntertainmentMode() async {
+    if (state.isEntertainmentModeActive) {
+      await _service.stopEntertainmentMode();
+      emit(state.copyWith(isEntertainmentModeActive: false));
+    } else {
+      // Ensure regular scanning is stopped before starting entertainment mode
+      if (state.isScanning) {
+        await stopScanning();
+      }
+      await _service.startEntertainmentMode();
+      emit(state.copyWith(isEntertainmentModeActive: true));
+    }
+  }
+
+  // New method to save scan data for entertainment mode
+  Future<bool> saveScanData() async {
+    // Make sure we're not scanning
+    if (state.isScanning) {
+      await stopScanning();
+    }
+
+    // Try to save the scan data
+    final success = await _service.saveScanData();
+    return success;
+  }
+
+  // Improved method to start entertainment mode with scan data
+  Future<void> startEntertainmentModeWithSavedScan() async {
+    // Make sure we're not scanning
+    if (state.isScanning) {
+      await stopScanning();
+    }
+
+    // First save the current scan data
+    final scanSaved = await saveScanData();
+    if (!scanSaved) {
+      print('Warning: Failed to save scan data for entertainment mode');
+    }
+
+    // Then start entertainment mode
+    await _service.startEntertainmentMode();
+    emit(state.copyWith(isEntertainmentModeActive: true));
+
+    // Automatically start coin spawning when entertainment mode is activated
+    if (state.isEntertainmentModeActive) {
+      await spawnEntertainmentObject(
+          assetName: 'coin',
+          properties: {'continuous': true} // Enable continuous coin spawning
+          );
+    }
+  }
+
+  Future<void> spawnEntertainmentObject({
+    required String assetName,
+    Map<String, dynamic>? properties,
+  }) async {
+    if (state.isEntertainmentModeActive) {
+      await _service.spawnObjectInEntertainmentMode(
+        assetName: assetName,
+        properties: properties,
+      );
+    } else {
+      // Optionally, log a warning or inform the user that entertainment mode is not active
+      print('Entertainment mode is not active. Cannot spawn object.');
+    }
+  }
+  // --- End Entertainment Mode Cubit Methods ---
 }

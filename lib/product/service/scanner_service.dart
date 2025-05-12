@@ -101,4 +101,52 @@ final class ScannerService {
       rethrow;
     }
   }
+
+  // New method to save current scan data for entertainment mode
+  Future<bool> saveScanData() async {
+    try {
+      final result = await _channel.invokeMethod<bool>('saveScanData');
+      return result ?? false;
+    } on PlatformException catch (e) {
+      print('Error saving scan data: ${e.message}');
+      return false;
+    }
+  }
+
+  // --- New Entertainment Mode Methods ---
+  Future<void> startEntertainmentMode() async {
+    try {
+      await _channel.invokeMethod('startEntertainmentMode');
+    } on PlatformException catch (e) {
+      print('Error starting entertainment mode: ${e.message}');
+      // Consider how to handle this error, maybe rethrow or return a status
+    }
+  }
+
+  Future<void> stopEntertainmentMode() async {
+    try {
+      await _channel.invokeMethod('stopEntertainmentMode');
+    } on PlatformException catch (e) {
+      print('Error stopping entertainment mode: ${e.message}');
+    }
+  }
+
+  Future<void> spawnObjectInEntertainmentMode(
+      {required String assetName, Map<String, dynamic>? properties}) async {
+    try {
+      // Add a flag for continuous spawning
+      final Map<String, dynamic> updatedProperties = properties ?? {};
+      if (properties?.containsKey('continuous') != true) {
+        updatedProperties['continuous'] = true; // Always use continuous mode
+      }
+
+      await _channel.invokeMethod('spawnObjectInEntertainmentMode', {
+        'assetName': assetName,
+        'properties': updatedProperties,
+      });
+    } on PlatformException catch (e) {
+      print('Error spawning object in entertainment mode: ${e.message}');
+    }
+  }
+  // --- End New Entertainment Mode Methods ---
 }
