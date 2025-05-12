@@ -16,6 +16,10 @@
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
 		D35E749269A25B10B45846FD /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 00E89347F149361D1B1379A9 /* Pods_Runner.framework */; };
+		DECB2A0C2DD1FEDF00366C80 /* ARExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = DECB2A082DD1FEDF00366C80 /* ARExtensions.swift */; };
+		DECB2A0D2DD1FEDF00366C80 /* MeshProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = DECB2A092DD1FEDF00366C80 /* MeshProcessor.swift */; };
+		DECB2A0E2DD1FEDF00366C80 /* ScannerConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = DECB2A0B2DD1FEDF00366C80 /* ScannerConfiguration.swift */; };
+		DECB2A0F2DD1FEDF00366C80 /* ModelExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = DECB2A0A2DD1FEDF00366C80 /* ModelExporter.swift */; };
 		DEEBA42A2DB0EFC1007EE22F /* ARKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DEEBA4292DB0EFC1007EE22F /* ARKit.framework */; };
 		DEEBA42D2DB0EFFD007EE22F /* ScannerViewFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEEBA42B2DB0EFFD007EE22F /* ScannerViewFactory.swift */; };
 		DEEBA42E2DB0EFFD007EE22F /* ScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEEBA42C2DB0EFFD007EE22F /* ScannerView.swift */; };
@@ -68,9 +72,13 @@
 		97C147001CF9000F007C117D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		AC832DD36D42385C0F77C0C5 /* Pods-Runner.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.profile.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.profile.xcconfig"; sourceTree = "<group>"; };
+		DECB2A082DD1FEDF00366C80 /* ARExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ARExtensions.swift; sourceTree = "<group>"; };
+		DECB2A092DD1FEDF00366C80 /* MeshProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeshProcessor.swift; sourceTree = "<group>"; };
+		DECB2A0A2DD1FEDF00366C80 /* ModelExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelExporter.swift; sourceTree = "<group>"; };
+		DECB2A0B2DD1FEDF00366C80 /* ScannerConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScannerConfiguration.swift; sourceTree = "<group>"; };
 		DEEBA4292DB0EFC1007EE22F /* ARKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ARKit.framework; path = System/Library/Frameworks/ARKit.framework; sourceTree = SDKROOT; };
-		DEEBA42B2DB0EFFD007EE22F /* ScannerViewFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ScannerViewFactory.swift; path = Runner/ScannerViewFactory.swift; sourceTree = "<group>"; };
-		DEEBA42C2DB0EFFD007EE22F /* ScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ScannerView.swift; path = Runner/ScannerView.swift; sourceTree = "<group>"; };
+		DEEBA42B2DB0EFFD007EE22F /* ScannerViewFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScannerViewFactory.swift; sourceTree = "<group>"; };
+		DEEBA42C2DB0EFFD007EE22F /* ScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScannerView.swift; sourceTree = "<group>"; };
 		DEF28BBC2DB0F57900E6AD02 /* SceneKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SceneKit.framework; path = System/Library/Frameworks/SceneKit.framework; sourceTree = SDKROOT; };
 		DF0C758AACF85B2B0ABD0568 /* Pods-RunnerTests.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.profile.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.profile.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -132,8 +140,6 @@
 		97C146E51CF9000F007C117D = {
 			isa = PBXGroup;
 			children = (
-				DEEBA42C2DB0EFFD007EE22F /* ScannerView.swift */,
-				DEEBA42B2DB0EFFD007EE22F /* ScannerViewFactory.swift */,
 				9740EEB11CF90186004384FC /* Flutter */,
 				97C146F01CF9000F007C117D /* Runner */,
 				97C146EF1CF9000F007C117D /* Products */,
@@ -155,6 +161,10 @@
 		97C146F01CF9000F007C117D /* Runner */ = {
 			isa = PBXGroup;
 			children = (
+				DECB2A082DD1FEDF00366C80 /* ARExtensions.swift */,
+				DECB2A092DD1FEDF00366C80 /* MeshProcessor.swift */,
+				DECB2A0A2DD1FEDF00366C80 /* ModelExporter.swift */,
+				DECB2A0B2DD1FEDF00366C80 /* ScannerConfiguration.swift */,
 				97C146FA1CF9000F007C117D /* Main.storyboard */,
 				97C146FD1CF9000F007C117D /* Assets.xcassets */,
 				97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */,
@@ -163,6 +173,8 @@
 				1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */,
 				74858FAE1ED2DC5600515810 /* AppDelegate.swift */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
+				DEEBA42B2DB0EFFD007EE22F /* ScannerViewFactory.swift */,
+				DEEBA42C2DB0EFFD007EE22F /* ScannerView.swift */,
 			);
 			path = Runner;
 			sourceTree = "<group>";
@@ -412,6 +424,10 @@
 				DEEBA42E2DB0EFFD007EE22F /* ScannerView.swift in Sources */,
 				74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */,
 				1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */,
+				DECB2A0C2DD1FEDF00366C80 /* ARExtensions.swift in Sources */,
+				DECB2A0D2DD1FEDF00366C80 /* MeshProcessor.swift in Sources */,
+				DECB2A0E2DD1FEDF00366C80 /* ScannerConfiguration.swift in Sources */,
+				DECB2A0F2DD1FEDF00366C80 /* ModelExporter.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

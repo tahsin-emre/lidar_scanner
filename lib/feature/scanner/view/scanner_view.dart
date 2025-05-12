@@ -6,11 +6,10 @@ import 'package:lidar_scanner/feature/scanner/cubit/scanner_state.dart';
 import 'package:lidar_scanner/feature/scanner/mixin/scanner_mixin.dart';
 import 'package:lidar_scanner/product/model/export_format.dart';
 import 'package:lidar_scanner/product/model/scan_result.dart';
-import 'package:lidar_scanner/product/utils/enum/scan_type.dart';
 
 final class ScannerView extends StatefulWidget {
-  const ScannerView({required this.scanType, super.key});
-  final ScanType scanType;
+  const ScannerView({super.key});
+
   @override
   State<ScannerView> createState() => _ScannerViewState();
 }
@@ -26,7 +25,7 @@ class _ScannerViewState extends State<ScannerView> with ScannerMixin {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.scanType.name),
+        title: const Text('Room Scan'),
         actions: [
           IconButton(
             onPressed: changeScanQuality,
@@ -143,7 +142,6 @@ class _ScannerViewState extends State<ScannerView> with ScannerMixin {
     } else {
       scannerCubit.startScanning(
         scanQuality: scanQuality,
-        scanType: widget.scanType,
       );
     }
   }

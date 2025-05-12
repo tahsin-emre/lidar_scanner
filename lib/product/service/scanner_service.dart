@@ -4,7 +4,6 @@ import 'package:lidar_scanner/product/model/export_format.dart';
 import 'package:lidar_scanner/product/model/export_result.dart';
 import 'package:lidar_scanner/product/model/scan_result.dart';
 import 'package:lidar_scanner/product/utils/enum/scan_quality.dart';
-import 'package:lidar_scanner/product/utils/enum/scan_type.dart';
 
 @singleton
 final class ScannerService {
@@ -22,15 +21,13 @@ final class ScannerService {
     }
   }
 
-  Future<void> startScanning(
-      {required ScanQuality quality, required ScanType scanType}) async {
+  Future<void> startScanning({required ScanQuality quality}) async {
     try {
       await _channel.invokeMethod('startScanning', {
         'scanQuality': quality.name,
-        'scanType': scanType.name,
+        'scanType': 'roomScan',
         'configuration': {
           ...quality.configuration,
-          ...scanType.configuration,
         },
       });
     } on PlatformException catch (e) {

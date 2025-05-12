@@ -5,14 +5,12 @@ import 'package:lidar_scanner/product/model/export_format.dart';
 import 'package:lidar_scanner/product/model/export_result.dart';
 import 'package:lidar_scanner/product/service/scanner_service.dart';
 import 'package:lidar_scanner/product/utils/enum/scan_quality.dart';
-import 'package:lidar_scanner/product/utils/enum/scan_type.dart';
 
 @injectable
 final class ScannerCubit extends Cubit<ScannerState> {
   ScannerCubit(this._service) : super(const ScannerState());
 
   final ScannerService _service;
-  ScanType _currentScanType = ScanType.roomScan;
 
   Future<void> checkTalent() async {
     final supported = await _service.checkTalent();
@@ -21,10 +19,8 @@ final class ScannerCubit extends Cubit<ScannerState> {
 
   Future<void> startScanning({
     required ScanQuality scanQuality,
-    ScanType scanType = ScanType.roomScan,
   }) async {
-    _currentScanType = scanType;
-    await _service.startScanning(quality: scanQuality, scanType: scanType);
+    await _service.startScanning(quality: scanQuality);
     emit(state.copyWith(isScanning: true));
     await _monitorScanningProgress();
   }

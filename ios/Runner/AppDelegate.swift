@@ -75,9 +75,8 @@ import ARKit // Import ARKit
       
       if let arguments = call.arguments as? [String: Any],
          let scanQuality = arguments["scanQuality"] as? String,
-         let scanType = arguments["scanType"] as? String,
          let configuration = arguments["configuration"] as? [String: Any] {
-          scannerView.startScanning(scanQuality: scanQuality, scanType: scanType, configuration: configuration)
+          scannerView.startScanning(scanQuality: scanQuality, scanType: "roomScan", configuration: configuration)
       } else {
           // Fallback to default settings if no parameters provided
           scannerView.startScanning(scanQuality: "highQuality", scanType: "roomScan", configuration: [:])

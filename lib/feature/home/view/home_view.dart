@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lidar_scanner/feature/home/mixin/home_mixin.dart';
 import 'package:lidar_scanner/feature/saved_scans/view/saved_scans_view.dart';
-import 'package:lidar_scanner/product/utils/enum/scan_type.dart';
 import 'package:lidar_scanner/product/utils/extensions/widget_ext.dart';
 
 part '../widgets/home_header.dart';
@@ -27,7 +26,6 @@ class _HomeViewState extends State<HomeView> with HomeMixin {
           _StartScanButton(
             icon: Icons.bedroom_parent,
             label: 'Scan Room',
-            scanType: ScanType.roomScan,
             onTap: pushToScanner,
           ).sliver(),
           _ViewSavedScansButton(() {
@@ -42,12 +40,10 @@ class _HomeViewState extends State<HomeView> with HomeMixin {
 final class _StartScanButton extends StatelessWidget {
   const _StartScanButton({
     required this.onTap,
-    required this.scanType,
     required this.label,
     required this.icon,
   });
-  final ValueChanged<ScanType> onTap;
-  final ScanType scanType;
+  final VoidCallback onTap;
   final String label;
   final IconData icon;
   @override
@@ -56,7 +52,7 @@ final class _StartScanButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         child: InkWell(
-          onTap: () => onTap(scanType),
+          onTap: onTap,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [

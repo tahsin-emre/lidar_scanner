@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lidar_scanner/feature/home/view/home_view.dart';
 import 'package:lidar_scanner/feature/scanner/view/scanner_view.dart';
-import 'package:lidar_scanner/product/utils/enum/scan_type.dart';
 import 'package:lidar_scanner/product/utils/extensions/widget_ext.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -42,7 +41,7 @@ mixin HomeMixin on State<HomeView> {
     });
   }
 
-  void pushToScanner(ScanType scanType) {
+  void pushToScanner() {
     if (!hasLidar) {
       showDialog<void>(
         context: context,
@@ -53,6 +52,6 @@ mixin HomeMixin on State<HomeView> {
       );
       return;
     }
-    ScannerView(scanType: scanType).push(context);
+    const ScannerView().push(context);
   }
 }
