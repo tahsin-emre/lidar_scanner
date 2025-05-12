@@ -102,33 +102,26 @@ class _ModelViewerState extends State<ModelViewerView> {
                 scene.world.add(object);
 
                 // Convert mesh to points
-                if (object.mesh != null) {
-                  final vertices = object.mesh!.vertices;
-                  final points = <Object>[];
+                final vertices = object.mesh.vertices;
+                final points = <Object>[];
 
-                  // Create a point for each vertex
-                  for (var i = 0; i < vertices.length; i += 3) {
-                    final point = Object(
-                      mesh: Mesh(
-                        vertices: [
-                          vertices[i],
-                          vertices[i + 1],
-                          vertices[i + 2]
-                        ],
-                        indices: [Polygon(0, 1, 2)],
-                      ),
-                    );
-                    final material = Material()
-                      ..diffuse = fromColor(Colors.blue);
-                    point.mesh.material = material;
-                    points.add(point);
-                  }
+                // Create a point for each vertex
+                for (var i = 0; i < vertices.length; i += 3) {
+                  final point = Object(
+                    mesh: Mesh(
+                      vertices: [vertices[i], vertices[i + 1], vertices[i + 2]],
+                      indices: [Polygon(0, 1, 2)],
+                    ),
+                  );
+                  final material = Material()..diffuse = fromColor(Colors.blue);
+                  point.mesh.material = material;
+                  points.add(point);
+                }
 
-                  // Remove original object and add points
-                  scene.world.remove(object);
-                  for (final point in points) {
-                    scene.world.add(point);
-                  }
+                // Remove original object and add points
+                scene.world.remove(object);
+                for (final point in points) {
+                  scene.world.add(point);
                 }
 
                 // Adjust camera settings
