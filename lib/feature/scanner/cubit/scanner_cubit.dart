@@ -56,10 +56,4 @@ final class ScannerCubit extends Cubit<ScannerState> {
   }) async {
     return _service.exportModel(format: format, fileName: fileName);
   }
-
-  Future<void> setObjectScanCenter() async {
-    if (_currentScanType == ScanType.objectScan) {
-      await _service.setObjectScanCenter();
-    }
-  }
 }

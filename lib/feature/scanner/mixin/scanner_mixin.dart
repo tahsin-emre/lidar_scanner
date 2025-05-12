@@ -6,7 +6,7 @@ import 'package:lidar_scanner/product/utils/enum/scan_quality.dart';
 
 mixin ScannerMixin on State<ScannerView> {
   late final scannerCubit = locator<ScannerCubit>();
-  ScanQuality scanQuality = ScanQuality.lowQuality;
+  ScanQuality scanQuality = ScanQuality.highQuality;
 
   @override
   void initState() {

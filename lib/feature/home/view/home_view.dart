@@ -24,21 +24,11 @@ class _HomeViewState extends State<HomeView> with HomeMixin {
             elevation: 0,
           ),
           _Header(hasLidar: hasLidar, deviceInfo: deviceInfo).sliver(),
-          Row(
-            children: [
-              _StartScanButton(
-                icon: Icons.wine_bar,
-                label: 'Scan Object',
-                scanType: ScanType.objectScan,
-                onTap: pushToScanner,
-              ),
-              _StartScanButton(
-                icon: Icons.bedroom_parent,
-                label: 'Scan Room',
-                scanType: ScanType.roomScan,
-                onTap: pushToScanner,
-              ),
-            ],
+          _StartScanButton(
+            icon: Icons.bedroom_parent,
+            label: 'Scan Room',
+            scanType: ScanType.roomScan,
+            onTap: pushToScanner,
           ).sliver(),
           _ViewSavedScansButton(() {
             const SavedScansView().push(context);
@@ -62,24 +52,22 @@ final class _StartScanButton extends StatelessWidget {
   final IconData icon;
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Card(
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          child: InkWell(
-            onTap: () => onTap(scanType),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  icon,
-                  size: 40,
-                  color: const Color(0xff29fcfe),
-                ),
-                const SizedBox(height: 8),
-                Text(label),
-              ],
-            ),
+    return Card(
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        child: InkWell(
+          onTap: () => onTap(scanType),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 40,
+                color: const Color(0xff29fcfe),
+              ),
+              const SizedBox(height: 8),
+              Text(label),
+            ],
           ),
         ),
       ),

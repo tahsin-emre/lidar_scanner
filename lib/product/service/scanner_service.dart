@@ -92,13 +92,4 @@ final class ScannerService {
       return const ExportResult(filePath: '', isSuccess: false);
     }
   }
-
-  Future<void> setObjectScanCenter() async {
-    try {
-      await _channel.invokeMethod('setObjectScanCenter');
-    } on PlatformException catch (e) {
-      print('Error setting object scan center: ${e.message}');
-      rethrow;
-    }
-  }
 }

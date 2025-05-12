@@ -41,8 +41,6 @@ class _ScannerViewState extends State<ScannerView> with ScannerMixin {
           children: [
             _buildScannerView(),
             _buildControls(),
-            if (widget.scanType == ScanType.objectScan)
-              _buildObjectScanControls(),
           ],
         ),
       ),
@@ -134,38 +132,6 @@ class _ScannerViewState extends State<ScannerView> with ScannerMixin {
             ],
           );
         },
-      ),
-    );
-  }
-
-  Widget _buildObjectScanControls() {
-    return Positioned(
-      bottom: 140,
-      left: 0,
-      right: 0,
-      child: Center(
-        child: BlocBuilder<ScannerCubit, ScannerState>(
-          bloc: scannerCubit,
-          builder: (context, state) {
-            if (!state.isScanning) return const SizedBox.shrink();
-
-            return ElevatedButton(
-              onPressed: () => scannerCubit.setObjectScanCenter(),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
-              ),
-              child: const Text(
-                'Hedef Nesneyi Ayarla',
-                style: TextStyle(fontSize: 16),
-              ),
-            );
-          },
-        ),
       ),
     );
   }
