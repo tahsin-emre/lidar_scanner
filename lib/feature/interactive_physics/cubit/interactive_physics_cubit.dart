@@ -426,11 +426,11 @@ class InteractivePhysicsCubit extends Cubit<InteractivePhysicsState> {
   List<double> _getScaleForObjectType(PhysicsObjectType type) {
     switch (type) {
       case PhysicsObjectType.sphere:
-        return [0.2, 0.2, 0.2];
+        return [0.05, 0.05, 0.05];
       case PhysicsObjectType.cube:
-        return [0.2, 0.2, 0.2];
+        return [0.05, 0.05, 0.05];
       case PhysicsObjectType.cylinder:
-        return [0.15, 0.3, 0.15];
+        return [0.05, 0.1, 0.05];
     }
   }
 
