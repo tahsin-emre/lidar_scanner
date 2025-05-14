@@ -1,3 +1,8 @@
+//
+//  AppDelegate.swift
+//  Runner
+//
+
 import Flutter
 import UIKit
 import ARKit // Import ARKit
@@ -45,11 +50,15 @@ import ARKit // Import ARKit
       }
     })
 
-    // Register the Platform View Factory, passing self (AppDelegate) to it
-    let factory = ScannerViewFactory(messenger: controller.binaryMessenger, appDelegate: self)
-    // Ensure the plugin name here matches EXACTLY what might be used elsewhere if you have other plugins
-    // Using a unique string like "com.example.lidarScanner/platformView" might be safer.
-    self.registrar(forPlugin: "com.example.lidarScanner.ScannerViewPlugin")!.register(factory, withId: "com.example.lidarScanner")
+    // Register the Scanner View Factory
+    let scannerFactory = ScannerViewFactory(messenger: controller.binaryMessenger, appDelegate: self)
+    print("Registering Scanner View Factory")
+    self.registrar(forPlugin: "com.example.lidarScanner.ScannerViewPlugin")!.register(scannerFactory, withId: "com.example.lidarScanner")
+    
+    // Register the Physics View Factory
+    let physicsFactory = PhysicsViewFactory(messenger: controller.binaryMessenger)
+    print("Registering Physics View Factory")
+    self.registrar(forPlugin: "com.example.lidarScanner.PhysicsViewPlugin")!.register(physicsFactory, withId: "com.example.lidarScanner/physicsView")
 
     GeneratedPluginRegistrant.register(with: self)
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)

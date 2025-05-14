@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:lidar_scanner/feature/home/mixin/home_mixin.dart';
+import 'package:lidar_scanner/feature/interactive_physics/view/interactive_physics_view.dart';
 import 'package:lidar_scanner/feature/saved_scans/view/saved_scans_view.dart';
+import 'package:lidar_scanner/feature/saved_scans/mixin/saved_scans_mixin.dart';
 import 'package:lidar_scanner/product/utils/extensions/widget_ext.dart';
 
 part '../widgets/home_header.dart';
@@ -23,14 +25,70 @@ class _HomeViewState extends State<HomeView> with HomeMixin {
             elevation: 0,
           ),
           _Header(hasLidar: hasLidar, deviceInfo: deviceInfo).sliver(),
+
+          // Ana tarama butonu
           _StartScanButton(
             icon: Icons.bedroom_parent,
             label: 'Scan Room',
             onTap: pushToScanner,
           ).sliver(),
-          _ViewSavedScansButton(() {
-            const SavedScansView().push(context);
-          }).sliver(),
+
+          const SizedBox(height: 16).sliver(),
+
+          // Bilgilendirme başlığı
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text(
+                'Interactive Features',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+
+          // Yeni özellikler hakkında kısa açıklama
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.0),
+              child: Text(
+                'You can view your saved scans and use the interactive physics mode to play with virtual objects in your scanned environment.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey,
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 16).sliver(),
+
+          // Kayıtlı taramaları görüntüleme butonu
+          _FeatureButton(
+            icon: Icons.folder_open,
+            label: 'View Saved Scans',
+            onTap: () {
+              const SavedScansView().push(context);
+            },
+          ).sliver(),
+
+          const SizedBox(height: 8).sliver(),
+
+          // Interactive Physics demo butonu
+          _FeatureButton(
+            icon: Icons.sports_esports,
+            label: 'Interactive Physics Demo',
+            onTap: () {
+              // Doğrudan SavedScansView'a yönlendir, orada interaktif fizik modu seçilebilir
+              const SavedScansView().push(context);
+            },
+          ).sliver(),
+
+          const SizedBox(height: 32).sliver(),
         ],
       ),
     );
@@ -71,9 +129,18 @@ final class _StartScanButton extends StatelessWidget {
   }
 }
 
-final class _ViewSavedScansButton extends StatelessWidget {
-  const _ViewSavedScansButton(this.onTap);
+// Yeni özellik butonu
+final class _FeatureButton extends StatelessWidget {
+  const _FeatureButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
   final VoidCallback onTap;
+
   @override
   Widget build(BuildContext context) {
     return ElevatedButton(
@@ -81,12 +148,12 @@ final class _ViewSavedScansButton extends StatelessWidget {
       style: ElevatedButton.styleFrom(
         padding: const EdgeInsets.symmetric(vertical: 16),
       ),
-      child: const Row(
+      child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.folder_open),
-          SizedBox(width: 8),
-          Text('View Saved Scans'),
+          Icon(icon),
+          const SizedBox(width: 8),
+          Text(label),
         ],
       ),
     );

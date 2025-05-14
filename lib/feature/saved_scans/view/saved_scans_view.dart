@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:lidar_scanner/feature/interactive_physics/view/interactive_physics_view.dart';
 import 'package:lidar_scanner/feature/model_viewer/view/model_viewer_view.dart';
 import 'package:lidar_scanner/feature/saved_scans/mixin/saved_scans_mixin.dart';
 import 'package:lidar_scanner/product/utils/extensions/widget_ext.dart';
@@ -60,17 +61,42 @@ class _SavedScansViewState extends State<SavedScansView> with SavedScansMixin {
       itemBuilder: (context, index) {
         final file = objFiles[index];
         final fileName = file.path.split('/').last; // Get simple filename
-        return ListTile(
-          leading: const Icon(Icons.view_in_ar), // Or Icons.folder_zip
-          title: Text(fileName),
-          subtitle: Text('Path: ${file.path}'), // Show full path if needed
-          onTap: () {
-            ModelViewerView(modelPath: file.path).push(context);
-          },
-          trailing: IconButton(
-            icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-            tooltip: 'Delete Scan',
-            onPressed: () => _deleteScan(file),
+        return Card(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Column(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.view_in_ar),
+                title: Text(fileName),
+                subtitle:
+                    Text('Path: ${file.path}'), // Show full path if needed
+              ),
+              ButtonBar(
+                alignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _ActionButton(
+                    icon: Icons.visibility,
+                    label: 'View',
+                    onPressed: () {
+                      ModelViewerView(modelPath: file.path).push(context);
+                    },
+                  ),
+                  _ActionButton(
+                    icon: Icons.sports_esports,
+                    label: 'Physics Mode',
+                    onPressed: () {
+                      InteractivePhysicsView(scanPath: file.path).push(context);
+                    },
+                  ),
+                  _ActionButton(
+                    icon: Icons.delete_outline,
+                    label: 'Delete',
+                    color: Colors.redAccent,
+                    onPressed: () => _deleteScan(file),
+                  ),
+                ],
+              ),
+            ],
           ),
         );
       },
@@ -113,5 +139,28 @@ class _SavedScansViewState extends State<SavedScansView> with SavedScansMixin {
         ),
       );
     }
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+    this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton.icon(
+      icon: Icon(icon, color: color),
+      label: Text(label, style: TextStyle(color: color)),
+      onPressed: onPressed,
+    );
   }
 }
