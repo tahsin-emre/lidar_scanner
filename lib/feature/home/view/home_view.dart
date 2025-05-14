@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lidar_scanner/feature/home/mixin/home_mixin.dart';
-import 'package:lidar_scanner/feature/interactive_physics/view/interactive_physics_view.dart';
 import 'package:lidar_scanner/feature/saved_scans/view/saved_scans_view.dart';
-import 'package:lidar_scanner/feature/saved_scans/mixin/saved_scans_mixin.dart';
 import 'package:lidar_scanner/product/utils/extensions/widget_ext.dart';
 
 part '../widgets/home_header.dart';
@@ -53,7 +51,7 @@ class _HomeViewState extends State<HomeView> with HomeMixin {
           // Yeni özellikler hakkında kısa açıklama
           const SliverToBoxAdapter(
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.0),
+              padding: EdgeInsets.symmetric(horizontal: 16),
               child: Text(
                 'You can view your saved scans and use the interactive physics mode to play with virtual objects in your scanned environment.',
                 textAlign: TextAlign.center,
@@ -83,7 +81,6 @@ class _HomeViewState extends State<HomeView> with HomeMixin {
             icon: Icons.sports_esports,
             label: 'Interactive Physics Demo',
             onTap: () {
-              // Doğrudan SavedScansView'a yönlendir, orada interaktif fizik modu seçilebilir
               const SavedScansView().push(context);
             },
           ).sliver(),

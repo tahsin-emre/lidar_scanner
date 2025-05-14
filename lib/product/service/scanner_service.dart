@@ -1,4 +1,5 @@
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:injectable/injectable.dart';
 import 'package:lidar_scanner/product/model/export_format.dart';
 import 'package:lidar_scanner/product/model/export_result.dart';
@@ -16,7 +17,7 @@ final class ScannerService {
       final result = await _channel.invokeMethod<bool>('checkTalent');
       return result ?? false;
     } on PlatformException catch (e) {
-      print('Error checking LiDAR support: ${e.message}');
+      debugPrint('Error checking talent: ${e.message}');
       return false;
     }
   }
@@ -31,7 +32,7 @@ final class ScannerService {
         },
       });
     } on PlatformException catch (e) {
-      print('Error starting scan: ${e.message}');
+      debugPrint('Error starting scan: ${e.message}');
       rethrow;
     }
   }
@@ -40,7 +41,7 @@ final class ScannerService {
     try {
       await _channel.invokeMethod('stopScanning');
     } on PlatformException catch (e) {
-      print('Error stopping scan: ${e.message}');
+      debugPrint('Error stopping scan: ${e.message}');
       rethrow;
     }
   }
@@ -54,28 +55,39 @@ final class ScannerService {
           progress: result['progress'] as double? ?? 0.0,
           isComplete: result['isComplete'] as bool? ?? false,
           missingAreas: result['missingAreas'] != null
-              ? (result['missingAreas'] as List)
-                  .map((e) => ScanArea(
-                        x: e['x'] as double? ?? 0.0,
-                        y: e['y'] as double? ?? 0.0,
-                        width: e['width'] as double? ?? 0.0,
-                        height: e['height'] as double? ?? 0.0,
-                      ))
-                  .toList()
+              ? (result['missingAreas'] as List).map(
+                  (e) {
+                    e as Map<String, dynamic>;
+                    return ScanArea(
+                      x: e['x'] as double? ?? 0.0,
+                      y: e['y'] as double? ?? 0.0,
+                      width: e['width'] as double? ?? 0.0,
+                      height: e['height'] as double? ?? 0.0,
+                    );
+                  },
+                ).toList()
               : [],
         );
       }
       return const ScanResult(
-          progress: 0.0, isComplete: false, missingAreas: []);
+        progress: 0,
+        isComplete: false,
+        missingAreas: [],
+      );
     } on PlatformException catch (e) {
-      print('Error getting scan progress: ${e.message}');
+      debugPrint('Error getting scan progress: ${e.message}');
       return const ScanResult(
-          progress: 0.0, isComplete: false, missingAreas: []);
+        progress: 0,
+        isComplete: false,
+        missingAreas: [],
+      );
     }
   }
 
-  Future<ExportResult> exportModel(
-      {required ExportFormat format, required String fileName}) async {
+  Future<ExportResult> exportModel({
+    required ExportFormat format,
+    required String fileName,
+  }) async {
     try {
       final path = await _channel.invokeMethod<String>('exportModel', {
         'format': format.name,
@@ -83,9 +95,11 @@ final class ScannerService {
       });
 
       return ExportResult(
-          filePath: path ?? '', isSuccess: path != null && path.isNotEmpty);
+        filePath: path ?? '',
+        isSuccess: path != null && path.isNotEmpty,
+      );
     } on PlatformException catch (e) {
-      print('Error exporting model: ${e.message}');
+      debugPrint('Error exporting model: ${e.message}');
       return const ExportResult(filePath: '', isSuccess: false);
     }
   }
