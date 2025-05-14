@@ -124,6 +124,11 @@ class PhysicsView: NSObject, FlutterPlatformView, ARSCNViewDelegate {
                         let material = SCNMaterial()
                         material.diffuse.contents = UIColor.lightGray.withAlphaComponent(0.8)
                         material.isDoubleSided = true
+                        
+                        // CRITICAL: Ensure the scanned mesh writes to the depth buffer
+                        material.writesToDepthBuffer = true
+                        material.readsFromDepthBuffer = true
+                        
                         geometry.materials = [material]
                         
                         // Create physics shape with concave mesh for accurate collision
@@ -141,10 +146,15 @@ class PhysicsView: NSObject, FlutterPlatformView, ARSCNViewDelegate {
                         child.physicsBody?.friction = self.defaultFriction
                         child.physicsBody?.restitution = self.defaultRestitution
                         child.physicsBody?.isAffectedByGravity = false // Kinematic bodies are not affected by gravity by default
+                        
                         // For kinematic bodies, ensure they can cause collisions
-                        child.physicsBody?.categoryBitMask = 1 // Example category
-                        child.physicsBody?.contactTestBitMask = 2 // Example: Collide with objects of category 2
-                        child.physicsBody?.collisionBitMask = 2 // Example: Collide with objects of category 2
+                        child.physicsBody?.categoryBitMask = 1 // Environment category
+                        child.physicsBody?.contactTestBitMask = 2 // Test contacts with physics objects
+                        child.physicsBody?.collisionBitMask = 2 // Collide with physics objects
+                        
+                        // CRITICAL: Set a negative rendering order for the scanned environment
+                        // This ensures it renders BEFORE the physics objects for proper occlusion
+                        child.renderingOrder = -10
                     }
                     scannedNode.addChildNode(child)
                 }
@@ -159,9 +169,16 @@ class PhysicsView: NSObject, FlutterPlatformView, ARSCNViewDelegate {
                     // Position the scanned node at the center of the scene
                     scannedNode.position = SCNVector3(0, 0, 0)
                     
+                    // CRITICAL: Set rendering order for the entire scanned node
+                    scannedNode.renderingOrder = -10
+                    
                     // Add the new scanned node to the scene
                     self.arView.scene.rootNode.addChildNode(scannedNode)
                     self.scannedNode = scannedNode
+                    
+                    // Configure the scene for proper depth testing
+                    self.arView.scene.background.contents = UIColor.black
+                    self.arView.scene.background.intensity = 0
                     
                     // Start AR session with proper configuration
                     let configuration = ARWorldTrackingConfiguration()
@@ -218,6 +235,9 @@ class PhysicsView: NSObject, FlutterPlatformView, ARSCNViewDelegate {
             blue: CGFloat(colorData[2]) / 255.0,
             alpha: CGFloat(colorData[3]) / 255.0
         )
+        // IMPORTANT: Ensure physics objects properly read from depth buffer
+        material.readsFromDepthBuffer = true
+        material.writesToDepthBuffer = true
         geometry.materials = [material]
         
         // Create node
@@ -234,10 +254,14 @@ class PhysicsView: NSObject, FlutterPlatformView, ARSCNViewDelegate {
         node.physicsBody?.mass = CGFloat(mass)
         node.physicsBody?.friction = defaultFriction
         node.physicsBody?.restitution = defaultRestitution
+        
         // Configure bitmasks for interaction with the kinematic environment
         node.physicsBody?.categoryBitMask = 2 // This object is of category 2
         node.physicsBody?.collisionBitMask = 1 // Collide with objects of category 1 (the environment)
         node.physicsBody?.contactTestBitMask = 1 // Notify contacts with category 1 (the environment)
+        
+        // CRITICAL: Ensure physics objects are rendered AFTER scanned mesh
+        node.renderingOrder = 1000  // Render objects after environment for proper occlusion
         
         // Store the object and add it to the scene
         physicsObjects[id] = node
@@ -379,14 +403,15 @@ class PhysicsView: NSObject, FlutterPlatformView, ARSCNViewDelegate {
         if scannedNode.geometry != nil {
             applyVisibility(to: scannedNode, visible: visible)
         } else {
-            // If scannedNode has no geometry, still set its opacity and renderingOrder
-            // to control overall group visibility if needed, though child settings should dominate.
-            scannedNode.opacity = visible ? 0.8 : 0.0
-            scannedNode.renderingOrder = visible ? 0 : -10
-            
-            // When hiding, ensure we're fully transparent
-            if !visible {
-                scannedNode.categoryBitMask = 0
+            // If scannedNode has no geometry, still set its properties
+            if visible {
+                scannedNode.opacity = 0.8
+                scannedNode.renderingOrder = 0
+                scannedNode.categoryBitMask = 1 // Default rendering category
+            } else {
+                scannedNode.opacity = 1.0  // Full opacity for proper occlusion
+                scannedNode.renderingOrder = -1
+                scannedNode.categoryBitMask = 2 // Occlusion-only category
             }
         }
 
@@ -401,65 +426,74 @@ class PhysicsView: NSObject, FlutterPlatformView, ARSCNViewDelegate {
         
         if visible {
             // Make the node visible with semi-transparent material
-            node.isHidden = false  // Make sure node is visible
+            node.isHidden = false
             node.opacity = 0.8
             node.castsShadow = true
             node.categoryBitMask = 1 // Default rendering category
+            node.renderingOrder = -10  // Render BEFORE physics objects
             
             // Apply semi-transparent material
             if node.geometry?.materials.isEmpty ?? true {
                 let material = SCNMaterial()
                 material.diffuse.contents = UIColor.lightGray.withAlphaComponent(0.8)
                 material.isDoubleSided = true
-                material.transparency = 0.2
+                material.transparency = 0.7
                 material.lightingModel = .blinn
+                
+                // Ensure proper depth testing
+                material.writesToDepthBuffer = true
+                material.readsFromDepthBuffer = true
+                
                 node.geometry?.materials = [material]
             } else {
                 for material in node.geometry?.materials ?? [] {
-                    material.transparency = 0.2
+                    material.transparency = 0.7
                     material.diffuse.contents = UIColor.lightGray.withAlphaComponent(0.8)
                     material.lightingModel = .blinn
+                    
+                    // Ensure proper depth testing
+                    material.writesToDepthBuffer = true
+                    material.readsFromDepthBuffer = true
                 }
             }
-            
-            node.renderingOrder = 0 // Default rendering order
         } else {
-            // SOLUTION #1: Use a combination of advanced techniques to make the mesh invisible
-            
-            // Set geometry materials to fully transparent
+            // Complete invisible occlusion material implementation
             if let geometry = node.geometry {
-                // Create completely transparent material that maintains physics
-                let invisibleMaterial = SCNMaterial()
-                invisibleMaterial.diffuse.contents = UIColor.clear
-                invisibleMaterial.specular.contents = UIColor.clear
-                invisibleMaterial.ambient.contents = UIColor.clear
-                invisibleMaterial.emission.contents = UIColor.clear
+                // CRITICAL FIX: Create a PURELY OCCLUDING material without any visual representation
+                let occlusionMaterial = SCNMaterial()
                 
-                // Set all transparency values to ensure it's fully invisible
-                invisibleMaterial.transparency = 1.0
-                invisibleMaterial.transparencyMode = .dualLayer
-                invisibleMaterial.writesToDepthBuffer = true  // Important for physics
-                invisibleMaterial.readsFromDepthBuffer = true // Important for physics
-                invisibleMaterial.isDoubleSided = true
+                // These properties no longer matter since we're using Depth Only rendering mode
+                occlusionMaterial.diffuse.contents = UIColor.black
+                occlusionMaterial.transparency = 0.0
                 
-                // Apply to geometry
-                geometry.materials = [invisibleMaterial]
+                // DEPTH-ONLY RENDERING: This is the critical fix for occlusion
+                occlusionMaterial.colorBufferWriteMask = [] // Don't write to color buffer at all
+                occlusionMaterial.writesToDepthBuffer = true // MUST write to depth buffer
+                occlusionMaterial.readsFromDepthBuffer = false // Don't read from depth buffer (prevents self-occlusion issues)
+                
+                // Set up as double-sided to ensure all surfaces occlude properly
+                occlusionMaterial.isDoubleSided = true
+                
+                // Apply to all surfaces of the geometry
+                geometry.materials = Array(repeating: occlusionMaterial, count: max(1, geometry.materials.count))
+                
+                // Alternative approach: modify the first material only if we have issues
+                // if let firstMaterial = geometry.firstMaterial {
+                //     firstMaterial.colorBufferWriteMask = []
+                //     firstMaterial.writesToDepthBuffer = true
+                // }
             }
             
-            // Configure node properties for invisibility while maintaining physics
-            node.opacity = 0.0
+            // Critical node settings for occlusion to work without visibility
+            node.isHidden = false  // CRITICAL: Hidden nodes cannot occlude
+            node.opacity = 1.0     // CRITICAL: Full opacity for proper depth testing
+            node.renderingOrder = -100 // Render MUCH EARLIER than physics objects for occlusion to work
+            node.categoryBitMask = 4 // Special category for occlusion-only objects
             node.castsShadow = false
-            node.renderingOrder = -10
-            
-            // Set the node's opacity modifier to hide it even more effectively
-            node.categoryBitMask = 0 // Remove from visible rendering categories, but keep physics
         }
         
         // IMPORTANT: Restore physics body to ensure collisions work
         node.physicsBody = physicsBody
-        
-        // Force update rendering
-        node.geometry?.firstMaterial?.readsFromDepthBuffer = visible ? true : true
     }
     
     /// Get the current camera position in the scene
