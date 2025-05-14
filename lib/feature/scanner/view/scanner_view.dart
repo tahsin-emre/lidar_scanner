@@ -6,6 +6,8 @@ import 'package:lidar_scanner/feature/scanner/cubit/scanner_state.dart';
 import 'package:lidar_scanner/feature/scanner/mixin/scanner_mixin.dart';
 import 'package:lidar_scanner/product/model/export_format.dart';
 import 'package:lidar_scanner/product/model/scan_result.dart';
+import 'package:lidar_scanner/feature/interactive_physics/view/interactive_physics_view.dart';
+import 'package:lidar_scanner/product/utils/extensions/widget_ext.dart';
 
 final class ScannerView extends StatefulWidget {
   const ScannerView({super.key});
@@ -59,11 +61,8 @@ class _ScannerViewState extends State<ScannerView> with ScannerMixin {
         return Stack(
           children: [
             const _Body(),
-            if (state.isScanning) ...[
-              _ScanningOverlay(progress: state.scanProgress),
-              if (state.missingAreas.isNotEmpty)
-                _MissingAreasOverlay(areas: state.missingAreas),
-            ],
+            if (state.isScanning && state.missingAreas.isNotEmpty)
+              _MissingAreasOverlay(areas: state.missingAreas),
           ],
         );
       },
@@ -78,55 +77,83 @@ class _ScannerViewState extends State<ScannerView> with ScannerMixin {
       child: BlocBuilder<ScannerCubit, ScannerState>(
         bloc: scannerCubit,
         builder: (context, state) {
-          return Row(
-            mainAxisAlignment: MainAxisAlignment.end,
+          final bool scanningComplete =
+              state.canScan && !state.isScanning && state.scanProgress > 0;
+
+          return Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              if (state.canScan && !state.isScanning) ...[
-                FloatingActionButton(
-                  heroTag: 'export_fab',
-                  onPressed: () async {
-                    // Show dialog to get filename
-                    final fileName = await _showFileNameDialog(context);
-                    if (fileName == null || fileName.isEmpty) {
-                      return; // User cancelled or entered empty name
-                    }
-
-                    try {
-                      final result = await scannerCubit.exportModel(
-                        format: ExportFormat.obj,
-                        fileName: fileName,
-                      );
-
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(result.isSuccess
-                                ? 'Exported to: ${result.filePath}'
-                                : 'Export failed'),
-                          ),
-                        );
-                      }
-                    } catch (e) {
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Export failed: $e'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                      }
-                    }
-                  },
-                  child: const Icon(Icons.save_alt),
+              // Only show these buttons if scanning is complete (has scan data)
+              if (scanningComplete) ...[
+                // Physics mode button
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16.0),
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.sports_esports),
+                    label: const Text('Enter Physics Mode'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                    ),
+                    onPressed: () => _enterPhysicsMode(context),
+                  ),
                 ),
-                const SizedBox(width: 16),
               ],
-              FloatingActionButton(
-                heroTag: 'scan_fab',
-                onPressed: () => _toggleScanning(state),
-                child: Icon(
-                  state.isScanning ? Icons.stop : Icons.play_arrow,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  // Only show export button if scanning is complete
+                  if (scanningComplete) ...[
+                    FloatingActionButton(
+                      heroTag: 'export_fab',
+                      onPressed: () async {
+                        // Show dialog to get filename
+                        final fileName = await _showFileNameDialog(context);
+                        if (fileName == null || fileName.isEmpty) {
+                          return; // User cancelled or entered empty name
+                        }
+
+                        try {
+                          final result = await scannerCubit.exportModel(
+                            format: ExportFormat.obj,
+                            fileName: fileName,
+                          );
+
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(result.isSuccess
+                                    ? 'Exported to: ${result.filePath}'
+                                    : 'Export failed'),
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Export failed: $e'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      child: const Icon(Icons.save_alt),
+                    ),
+                    const SizedBox(width: 16),
+                  ],
+                  // Always show the scan button
+                  FloatingActionButton(
+                    heroTag: 'scan_fab',
+                    onPressed: () => _toggleScanning(state),
+                    child: Icon(
+                      state.isScanning ? Icons.stop : Icons.play_arrow,
+                    ),
+                  ),
+                ],
               ),
             ],
           );
@@ -142,6 +169,58 @@ class _ScannerViewState extends State<ScannerView> with ScannerMixin {
     } else {
       scannerCubit.startScanning(
         scanQuality: scanQuality,
+      );
+    }
+  }
+
+  Future<void> _enterPhysicsMode(BuildContext context) async {
+    try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Preparing physics environment...'),
+            ],
+          ),
+        ),
+      );
+
+      // Export current scan to temporary file
+      final scanPath = await scannerCubit.exportForPhysicsMode();
+
+      if (!mounted) return;
+
+      // Close loading dialog
+      Navigator.of(context).pop();
+
+      if (scanPath.isNotEmpty) {
+        // Navigate to physics mode with the temporary scan
+        InteractivePhysicsView(scanPath: scanPath).push(context);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to prepare physics environment'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      // Close loading dialog if still open
+      Navigator.of(context).pop();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }

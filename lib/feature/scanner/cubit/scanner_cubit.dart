@@ -52,4 +52,14 @@ final class ScannerCubit extends Cubit<ScannerState> {
   }) async {
     return _service.exportModel(format: format, fileName: fileName);
   }
+
+  /// Exports the current scan to a temporary file for immediate use in physics mode
+  Future<String> exportForPhysicsMode() async {
+    final result = await _service.exportModel(
+      format: ExportFormat.obj,
+      fileName: 'temp_physics_scan_${DateTime.now().millisecondsSinceEpoch}',
+    );
+
+    return result.filePath;
+  }
 }
