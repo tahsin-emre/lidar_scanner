@@ -19,7 +19,6 @@ class MeshProcessor {
             case "lowQuality":
                 processLowQualityScan(geometry: geometry)
             default:
-                // Varsayılan olarak yüksek kalite
                 processHighQualityScan(geometry: geometry, anchor: anchor)
             }
         }
@@ -57,7 +56,7 @@ class MeshProcessor {
         // Mesh çapasından SCNGeometry oluştur
         let geometry = SCNGeometry(arGeometry: meshAnchor.geometry)
 
-        // Wireframe görselleştirme ile node oluştur
+        // Node oluştur
         let node = SCNNode(geometry: geometry)
         
         // Wireframe materyal uygula
@@ -85,10 +84,7 @@ class MeshProcessor {
     ///   - meshAnchor: Mesh çapası
     ///   - quality: İstenen tarama kalitesi
     func updateNodeForMeshAnchor(_ node: SCNNode, meshAnchor: ARMeshAnchor, withQuality quality: String) {
-        // Yeni geometri oluştur
         let newGeometry = SCNGeometry(arGeometry: meshAnchor.geometry)
-        
-        // Mevcut materyali koru
         let originalMaterial = node.geometry?.firstMaterial?.copy() as? SCNMaterial
         
         // Node geometrisini güncelle

@@ -85,6 +85,9 @@ class ScannerView: NSObject, FlutterPlatformView, ARSCNViewDelegate, ARSessionDe
         print("Native iOS: Stopping AR session")
         isScanning = false
         session.pause()
+        
+        // Tarama durdurulduğunda geçici dosyaları temizle
+        modelExporter.cleanupTemporaryFiles()
     }
     
     /// Tarama ilerlemesini döndürür
@@ -110,12 +113,20 @@ class ScannerView: NSObject, FlutterPlatformView, ARSCNViewDelegate, ARSessionDe
             return ""
         }
         
+        // Dosya adından geçici dosya olup olmadığını kontrol et
+        let isTemporary = fileName.hasPrefix("temp_physics_scan_")
+        
+        if isTemporary {
+            print("ScannerView: Exporting as temporary file: \(fileName)")
+        }
+        
         let meshAnchors = frame.anchors.compactMap { $0 as? ARMeshAnchor }
         return modelExporter.exportModel(
             meshAnchors: meshAnchors,
             format: format,
             fileName: fileName,
-            quality: currentscanQuality
+            quality: currentscanQuality,
+            isTemporary: isTemporary
         )
     }
     

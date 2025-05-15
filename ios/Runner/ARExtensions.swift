@@ -2,9 +2,7 @@ import Foundation
 import ARKit
 import SceneKit
 
-// MARK: - Yardımcı Uzantılar
-
-/// ARMeshGeometry'den SCNGeometry oluşturmak için yardımcı uzantı
+// ARMeshGeometry için yardımcı uzantılar
 @available(iOS 13.4, *)
 extension SCNGeometry {
     /// AR Mesh Geometrisini SceneKit geometrisine dönüştürür

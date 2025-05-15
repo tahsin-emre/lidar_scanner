@@ -11,13 +11,14 @@ class ModelExporter {
     ///   - format: Dışa aktarma formatı (şu an sadece "obj" destekleniyor)
     ///   - fileName: Kaydedilecek dosya adı
     ///   - quality: Dışa aktarma kalitesi
+    ///   - isTemporary: Dosyanın geçici olup olmadığı (varsayılan: false)
     /// - Returns: Kaydedilen dosyanın tam yolunu döndürür, başarısız olursa boş string döner
-    func exportModel(meshAnchors: [ARMeshAnchor], format: String, fileName: String, quality: String) -> String {
-        print("ModelExporter: exportModel called with format: \(format), filename: \(fileName)")
+    func exportModel(meshAnchors: [ARMeshAnchor], format: String, fileName: String, quality: String, isTemporary: Bool = false) -> String {
+        print("ModelExporter: exportModel called with format: \(format), filename: \(fileName), isTemporary: \(isTemporary)")
 
         guard format.lowercased() == "obj" else {
             print("Error: Currently only OBJ format is supported for export.")
-            return "" // Return empty path or an error indicator
+            return ""
         }
 
         guard !meshAnchors.isEmpty else {
@@ -74,29 +75,86 @@ class ModelExporter {
             normalOffset += geometry.normals.count
         }
 
-        return writeObjFile(content: objContent, fileName: fileName)
+        return writeObjFile(content: objContent, fileName: fileName, isTemporary: isTemporary)
     }
     
     /// OBJ dosyasını diske yazar
     /// - Parameters:
     ///   - content: Dosya içeriği
     ///   - fileName: Dosya adı
+    ///   - isTemporary: Dosyanın geçici olup olmadığı (varsayılan: false)
     /// - Returns: Kaydedilen dosyanın tam yolunu döndürür, başarısız olursa boş string döner
-    private func writeObjFile(content: String, fileName: String) -> String {
-        let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+    private func writeObjFile(content: String, fileName: String, isTemporary: Bool = false) -> String {
+        // Dosya adını hazırla
         let finalFileName = fileName.hasSuffix(".obj") ? fileName : fileName + ".obj"
-        let fileURL = documentsPath.appendingPathComponent(finalFileName)
+        
+        // Dosya konumu belirle (geçici veya kalıcı)
+        let fileURL: URL
+        let directoryType: String
+        
+        if isTemporary {
+            let tempDirURL = FileManager.default.temporaryDirectory
+            fileURL = tempDirURL.appendingPathComponent(finalFileName)
+            directoryType = "temporary"
+            
+            // Mevcut geçici dosyayı temizle
+            if FileManager.default.fileExists(atPath: fileURL.path) {
+                do {
+                    try FileManager.default.removeItem(at: fileURL)
+                    print("Removed existing temporary file at: \(fileURL.path)")
+                } catch {
+                    print("Warning: Could not remove existing temporary file: \(error)")
+                }
+            }
+        } else {
+            let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            fileURL = documentsPath.appendingPathComponent(finalFileName)
+            directoryType = "documents"
+        }
+        
         let filePathString = fileURL.path
-
-        print("Attempting to export OBJ to: \(filePathString)")
+        print("Attempting to export OBJ to \(directoryType) directory: \(filePathString)")
 
         do {
             try content.write(to: fileURL, atomically: true, encoding: .utf8)
-            print("Successfully exported OBJ file.")
+            print("Successfully exported OBJ file to \(directoryType) directory.")
             return filePathString
         } catch {
             print("Error writing OBJ file: \(error)")
             return ""
+        }
+    }
+    
+    /// Tüm geçici OBJ dosyalarını temizler
+    func cleanupTemporaryFiles() {
+        let tempDirURL = FileManager.default.temporaryDirectory
+        
+        do {
+            let fileURLs = try FileManager.default.contentsOfDirectory(at: tempDirURL, 
+                                                                    includingPropertiesForKeys: nil)
+            
+            // Sadece .obj uzantılı ve temp_physics_scan_ ön ekli dosyaları sil
+            let objFiles = fileURLs.filter { 
+                $0.pathExtension == "obj" && $0.lastPathComponent.hasPrefix("temp_physics_scan_")
+            }
+            
+            if objFiles.isEmpty {
+                print("No temporary OBJ files to clean up")
+                return
+            }
+            
+            print("Cleaning up \(objFiles.count) temporary OBJ files")
+            
+            for fileURL in objFiles {
+                do {
+                    try FileManager.default.removeItem(at: fileURL)
+                    print("Removed temporary file: \(fileURL.lastPathComponent)")
+                } catch {
+                    print("Error removing temporary file \(fileURL.lastPathComponent): \(error)")
+                }
+            }
+        } catch {
+            print("Error listing temporary directory contents: \(error)")
         }
     }
 } 
