@@ -21,6 +21,7 @@ dependencies:
   # model_viewer_plus: ^1.7.0
   device_info_plus: ^10.1.0
   model_viewer_plus: ^1.9.3
+  intl: ^0.20.2
 
 dev_dependencies:
   flutter_test:

@@ -7,6 +7,7 @@ import Foundation
 import ARKit
 import SceneKit
 import SceneKit.ModelIO
+import Metal
 
 // Extension for SCNVector3 to support multiplication with a Float
 extension SCNVector3 {
@@ -22,8 +23,8 @@ extension SCNVector3 {
 @available(iOS 13.4, *)
 extension SCNGeometry {
     static func from(meshAnchor: ARMeshAnchor) -> SCNGeometry {
-        let geometry = SCNGeometry(arGeometry: meshAnchor.geometry)
-        return geometry
+        // Use the init(arGeometry:) constructor that's defined in ARExtensions.swift
+        return SCNGeometry(arGeometry: meshAnchor.geometry)
     }
 }
 
@@ -50,6 +51,9 @@ class PhysicsView: NSObject, FlutterPlatformView, ARSCNViewDelegate {
     
     // Visual debugging properties
     private var showDebugVisualization: Bool = false
+    
+    // Selected object type for physics objects
+    private var selectedObjectType: String = "sphere"
     
     // MARK: - Initialization
     init(
@@ -163,10 +167,14 @@ class PhysicsView: NSObject, FlutterPlatformView, ARSCNViewDelegate {
                     
                     // Enable mesh reconstruction for LiDAR-equipped devices
                     if ARWorldTrackingConfiguration.supportsSceneReconstruction(.mesh) {
+                        print("Device supports LiDAR mesh reconstruction")
                         configuration.sceneReconstruction = .mesh
+                        configuration.frameSemantics.insert(.personSegmentationWithDepth)
+                    } else {
+                        print("Device does NOT support LiDAR mesh reconstruction")
                     }
                     
-                    // Set the session delegate to handle ARMeshAnchors
+                    // IMPORTANT: Set the session delegate to handle ARMeshAnchors
                     self.arView.session.delegate = self
                     
                     self.session.run(configuration)
@@ -180,7 +188,6 @@ class PhysicsView: NSObject, FlutterPlatformView, ARSCNViewDelegate {
     /// Add a physics object to the scene
     func addPhysicsObject(objectData: [String: Any]) -> Bool {
         guard let id = objectData["id"] as? String,
-              let type = objectData["type"] as? String,
               let position = objectData["position"] as? [Double],
               let scale = objectData["scale"] as? [Double],
               let colorData = objectData["color"] as? [Int],
@@ -189,11 +196,17 @@ class PhysicsView: NSObject, FlutterPlatformView, ARSCNViewDelegate {
             return false
         }
         
+        // Use selected object type if not specified in the objectData
+        let type = objectData["type"] as? String ?? selectedObjectType
+        
         // Create geometry based on type
         var geometry: SCNGeometry
+        var node: SCNNode
+        
         switch type {
         case "sphere":
             geometry = SCNSphere(radius: CGFloat(scale[0]))
+            node = SCNNode(geometry: geometry)
         case "cube":
             geometry = SCNBox(
                 width: CGFloat(scale[0] * 2),
@@ -201,52 +214,240 @@ class PhysicsView: NSObject, FlutterPlatformView, ARSCNViewDelegate {
                 length: CGFloat(scale[2] * 2),
                 chamferRadius: 0
             )
+            node = SCNNode(geometry: geometry)
         case "cylinder":
             geometry = SCNCylinder(
                 radius: CGFloat(scale[0]),
                 height: CGFloat(scale[1] * 2)
             )
+            node = SCNNode(geometry: geometry)
+        case "coin":
+            // Madeni para - ince yassı bir silindir
+            geometry = SCNCylinder(
+                radius: CGFloat(scale[0]),
+                height: CGFloat(scale[1]) // Çok ince
+            )
+            node = SCNNode(geometry: geometry)
+            
+            // Paralara özgü metalik görünüm
+            let coinMaterial = SCNMaterial()
+            
+            // Renk seçeneğine göre altın veya gümüş renk ver
+            if colorData[0] > 200 && colorData[1] > 200 && colorData[2] > 200 {
+                // Gümüş/platin para
+                coinMaterial.diffuse.contents = UIColor(red: 0.95, green: 0.95, blue: 0.95, alpha: 1.0)
+                coinMaterial.metalness.contents = 0.9
+                coinMaterial.roughness.contents = 0.1
+            } else {
+                // Altın para
+                coinMaterial.diffuse.contents = UIColor(red: 0.85, green: 0.65, blue: 0.10, alpha: 1.0)
+                coinMaterial.metalness.contents = 0.8
+                coinMaterial.roughness.contents = 0.2
+            }
+            
+            // İkinci materyal - kenar materyal
+            let edgeMaterial = SCNMaterial()
+            edgeMaterial.diffuse.contents = coinMaterial.diffuse.contents
+            edgeMaterial.metalness.contents = coinMaterial.metalness.contents
+            edgeMaterial.roughness.contents = 0.4 // Kenarlar biraz daha pürüzlü
+            
+            // Paranın üst ve alt yüzeyleri ile kenar materyallerini ayarla
+            coinMaterial.lightingModel = .physicallyBased
+            edgeMaterial.lightingModel = .physicallyBased
+            node.geometry?.materials = [coinMaterial, edgeMaterial, coinMaterial]
+            
+            // Para düz düşsün diye rotasyonu ayarla
+            node.eulerAngles = SCNVector3(Float.pi/2, 0, 0)
+            
+            // Fizik özelliklerini para gibi ayarla 
+            let physicsShape = SCNPhysicsShape(
+                geometry: geometry,
+                options: [
+                    SCNPhysicsShape.Option.keepAsCompound: false,
+                    SCNPhysicsShape.Option.collisionMargin: 0.005
+                ]
+            )
+            
+            // Düzgün çarpışma için daha iyi physics body konfigürasyonu
+            node.physicsBody = SCNPhysicsBody(type: .dynamic, shape: physicsShape)
+            node.physicsBody?.mass = CGFloat(mass) // Kütleyi parametre olarak al
+            node.physicsBody?.restitution = 0.3    // Az zıplasın
+            node.physicsBody?.rollingFriction = 0.2 // Yuvarlanma direnci düşük
+            node.physicsBody?.friction = 0.3       // Sürtünmeyi arttır
+            
+            // Çarpışma maskeleri - önemli
+            node.physicsBody?.categoryBitMask = 2  // 2 = Hareketli objeler
+            node.physicsBody?.collisionBitMask = 1 + 2 + 4  // Statik mesh (1), diğer objeler (2) ve oklüzyon mesh (4) ile çarpışsın
+            node.physicsBody?.contactTestBitMask = 1 + 2  // Statik mesh (1) ve diğer objeler (2) ile temas etsin
+            
+            // Yuvarlanma hareketi ekle - gerçekçi düşüş için
+            node.physicsBody?.angularVelocity = SCNVector4(
+                Float.random(in: -1...1), 
+                Float.random(in: -1...1), 
+                Float.random(in: -1...1), 
+                Float.random(in: 0...2)
+            )
+            
+            // SCNCylinder'da chamferRadius olmadığı için kenarlar için ekstra işlem yapamıyoruz
+            // Görsel olarak daha iyi görünmesi için kenar materyaline odaklanıyoruz
+        case "usdz":
+            // Try to load USDZ model
+            // Check both main bundle and resources directory
+            let modelNames = ["model", "test_cube", "cube", "sphere"] 
+            var modelURL: URL? = nil
+            
+            // Try different model names
+            for modelName in modelNames {
+                if let url = Bundle.main.url(forResource: modelName, withExtension: "usdz") {
+                    modelURL = url
+                    print("Found model with name: \(modelName)")
+                    break
+                }
+            }
+            
+            // If still nil, check common directories
+            if modelURL == nil {
+                let potentialPaths = [
+                    Bundle.main.bundlePath + "/model.usdz",
+                    Bundle.main.resourceURL?.appendingPathComponent("model.usdz").path ?? "",
+                    Bundle.main.resourceURL?.appendingPathComponent("Resources/model.usdz").path ?? "",
+                    Bundle.main.bundlePath + "/Runner.app/model.usdz"
+                ]
+                
+                for path in potentialPaths {
+                    print("Checking path: \(path)")
+                    if FileManager.default.fileExists(atPath: path) {
+                        modelURL = URL(fileURLWithPath: path)
+                        print("Found model at path: \(path)")
+                        break
+                    }
+                }
+            }
+            
+            // Try creating a small box as fallback USDZ model
+            if modelURL == nil {
+                print("Creating a fallback box model...")
+                let box = SCNBox(width: 0.05, height: 0.05, length: 0.05, chamferRadius: 0.005)
+                box.firstMaterial?.diffuse.contents = UIColor.red
+                geometry = box
+                node = SCNNode(geometry: geometry)
+            }
+            
+            // Log model path for debugging
+            print("Looking for USDZ model at: \(Bundle.main.resourceURL?.path ?? "unknown")/model.usdz")
+            print("Model URL found: \(modelURL?.path ?? "nil")")
+            
+            if let modelURL = modelURL {
+                do {
+                    let scene = try SCNScene(url: modelURL, options: nil)
+                    node = SCNNode()
+                    
+                    // Add all nodes from the USDZ scene
+                    for childNode in scene.rootNode.childNodes {
+                        node.addChildNode(childNode.clone())
+                    }
+                    
+                    // Scale the node
+                    node.scale = SCNVector3(
+                        x: Float(scale[0]) * 0.01,  // Çok daha küçük ölçek (1/100)
+                        y: Float(scale[1]) * 0.01,
+                        z: Float(scale[2]) * 0.01
+                    )
+                    
+                    // Create physics shape
+                    let physicsShape = SCNPhysicsShape(node: node, options: [
+                        SCNPhysicsShape.Option.keepAsCompound: true,
+                        SCNPhysicsShape.Option.scale: SCNVector3(
+                            x: Float(scale[0]) * 0.01,  // Fizik şeklinin ölçeğini de küçült
+                            y: Float(scale[1]) * 0.01,
+                            z: Float(scale[2]) * 0.01
+                        )
+                    ])
+                    
+                    // Create physics body
+                    node.physicsBody = SCNPhysicsBody(type: .dynamic, shape: physicsShape)
+                    node.physicsBody?.mass = CGFloat(mass)
+                    node.physicsBody?.friction = defaultFriction
+                    node.physicsBody?.restitution = defaultRestitution
+                    node.physicsBody?.categoryBitMask = 2
+                    node.physicsBody?.collisionBitMask = 1
+                    node.physicsBody?.contactTestBitMask = 1
+                    
+                    // Set position
+                    node.position = SCNVector3(
+                        x: Float(position[0]),
+                        y: Float(position[1]),
+                        z: Float(position[2])
+                    )
+                    
+                    // Set rendering order for occlusion
+                    node.renderingOrder = 1000
+                    
+                    // Add to scene
+                    physicsObjects[id] = node
+                    arView.scene.rootNode.addChildNode(node)
+                    
+                    return true
+                } catch {
+                    print("Failed to load USDZ model: \(error)")
+                    // Fall back to sphere if model loading fails
+                    geometry = SCNSphere(radius: CGFloat(scale[0]))
+                    node = SCNNode(geometry: geometry)
+                }
+            } else {
+                print("USDZ model file not found. Searched in bundle and Resources directory")
+                // Fall back to sphere if model is not found
+                geometry = SCNSphere(radius: CGFloat(scale[0]))
+                node = SCNNode(geometry: geometry)
+            }
         default:
-            print("Unknown object type: \(type)")
-            return false
+            geometry = SCNSphere(radius: CGFloat(scale[0]))
+            node = SCNNode(geometry: geometry)
         }
         
-        // Create material with proper depth settings
-        let material = SCNMaterial()
-        material.diffuse.contents = UIColor(
-            red: CGFloat(colorData[0]) / 255.0,
-            green: CGFloat(colorData[1]) / 255.0,
-            blue: CGFloat(colorData[2]) / 255.0,
-            alpha: CGFloat(colorData[3]) / 255.0
-        )
-        material.readsFromDepthBuffer = true
-        material.writesToDepthBuffer = true
-        geometry.materials = [material]
+        // Create material with proper depth settings (for standard geometry types)
+        if type != "usdz" || node.geometry != nil {
+            let material = SCNMaterial()
+            material.diffuse.contents = UIColor(
+                red: CGFloat(colorData[0]) / 255.0,
+                green: CGFloat(colorData[1]) / 255.0,
+                blue: CGFloat(colorData[2]) / 255.0,
+                alpha: CGFloat(colorData[3]) / 255.0
+            )
+            material.readsFromDepthBuffer = true
+            material.writesToDepthBuffer = true
+            node.geometry?.materials = [material]
+            
+            // Create physics body for standard geometry types
+            if node.physicsBody == nil {
+                let physicsShape = SCNPhysicsShape(geometry: node.geometry!, options: nil)
+                node.physicsBody = SCNPhysicsBody(type: .dynamic, shape: physicsShape)
+                node.physicsBody?.mass = CGFloat(mass)
+                node.physicsBody?.friction = defaultFriction
+                node.physicsBody?.restitution = defaultRestitution
+                node.physicsBody?.categoryBitMask = 2
+                node.physicsBody?.collisionBitMask = 1
+                node.physicsBody?.contactTestBitMask = 1
+            }
+            
+            // Set position if not already set
+            if node.position.x == 0 && node.position.y == 0 && node.position.z == 0 {
+                node.position = SCNVector3(
+                    x: Float(position[0]),
+                    y: Float(position[1]),
+                    z: Float(position[2])
+                )
+            }
+            
+            // Set rendering order for occlusion
+            node.renderingOrder = 1000
+        }
         
-        // Create node
-        let node = SCNNode(geometry: geometry)
-        node.position = SCNVector3(
-            x: Float(position[0]),
-            y: Float(position[1]),
-            z: Float(position[2])
-        )
-        
-        // Configure physics
-        let physicsShape = SCNPhysicsShape(geometry: geometry, options: nil)
-        node.physicsBody = SCNPhysicsBody(type: .dynamic, shape: physicsShape)
-        node.physicsBody?.mass = CGFloat(mass)
-        node.physicsBody?.friction = defaultFriction
-        node.physicsBody?.restitution = defaultRestitution
-        node.physicsBody?.categoryBitMask = 2
-        node.physicsBody?.collisionBitMask = 1
-        node.physicsBody?.contactTestBitMask = 1
-        
-        // Set rendering order for occlusion
-        node.renderingOrder = 1000
-        
-        // Add to scene
-        physicsObjects[id] = node
-        arView.scene.rootNode.addChildNode(node)
+        // Add to scene if not already added
+        if physicsObjects[id] == nil {
+            physicsObjects[id] = node
+            arView.scene.rootNode.addChildNode(node)
+        }
         
         return true
     }
@@ -312,6 +513,41 @@ class PhysicsView: NSObject, FlutterPlatformView, ARSCNViewDelegate {
         let angleRadians = Float(angle * .pi / 180.0)
         let rotationMatrix = SCNMatrix4MakeRotation(angleRadians, 0, 1, 0)
         node.transform = SCNMatrix4Mult(node.transform, rotationMatrix)
+        
+        return true
+    }
+    
+    /// Zoom in/out on the model using the given scale factor
+    func zoomModel(scaleFactor: Double) -> Bool {
+        guard let node = scannedNode else {
+            return false
+        }
+        
+        // Geçerli zoom aralığını kontrole et (çok büyük veya çok küçük olmasını engelle)
+        let zoomFactor = Float(scaleFactor)
+        let currentScale = node.scale
+        
+        // Minimum ve maksimum ölçek sınırları
+        let minScale: Float = 0.1
+        let maxScale: Float = 5.0
+        
+        // Yeni ölçeği hesapla
+        let newScale = SCNVector3(
+            x: currentScale.x * zoomFactor,
+            y: currentScale.y * zoomFactor,
+            z: currentScale.z * zoomFactor
+        )
+        
+        // Ölçek sınırlarını kontrol et
+        if newScale.x < minScale || newScale.y < minScale || newScale.z < minScale ||
+           newScale.x > maxScale || newScale.y > maxScale || newScale.z > maxScale {
+            print("PhysicsView: Zoom rejected - would exceed scale limits")
+            return false
+        }
+        
+        // Yeni ölçeği uygula
+        node.scale = newScale
+        print("PhysicsView: Model zoomed to scale: (\(newScale.x), \(newScale.y), \(newScale.z))")
         
         return true
     }
@@ -499,6 +735,201 @@ class PhysicsView: NSObject, FlutterPlatformView, ARSCNViewDelegate {
         }
     }
     
+    /// Set the selected object type for physics objects
+    func setSelectedObject(type: String) -> Bool {
+        print("PhysicsView: Setting selected object type to \(type)")
+        selectedObjectType = type
+        return true
+    }
+    
+    /// Start object rain effect with the selected object type
+    func startObjectRain(count: Int, height: Float) -> Bool {
+        let cameraPos = arView.pointOfView?.position ?? SCNVector3(0, 0, 0)
+        
+        // Yağmur daha geniş bir alanda oluşsun
+        let rainRadiusHorizontal: Float = 5.0  // Daha geniş yatay yayılım
+        let rainHeight: Float = height + 1.0    // Biraz daha yüksekten
+        
+        print("PhysicsView: Starting object rain with \(count) \(selectedObjectType) objects")
+        
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+            
+            for i in 0..<count {
+                // Kamera etrafında geniş alanda rastgele pozisyon
+                let angle = Float.random(in: 0...(Float.pi * 2))  // 0-360 derece
+                let distance = Float.random(in: 0.5...rainRadiusHorizontal)  // Uzaklık
+                
+                // Polar koordinatları x,z düzlemine çevir
+                let randomX = cameraPos.x + cos(angle) * distance
+                let randomZ = cameraPos.z + sin(angle) * distance
+                
+                // Yükseklik - daha rastgele
+                let randomY = cameraPos.y + rainHeight + Float.random(in: -0.5...1.5)
+                
+                // Başlangıç hızı ve dönüş - her model tipi için farklı
+                var initialVelocity = [
+                    Double.random(in: -0.3...0.3),  // Rastgele x hızı
+                    Double.random(in: -0.1...0.0),  // Hafif aşağı y hızı
+                    Double.random(in: -0.3...0.3)   // Rastgele z hızı
+                ]
+                
+                var initialAngularVelocity = [
+                    Double.random(in: -2...2),  // x ekseni etrafında dönüş
+                    Double.random(in: -2...2),  // y ekseni etrafında dönüş
+                    Double.random(in: -2...2)   // z ekseni etrafında dönüş
+                ]
+                
+                // Model tipine göre ayarlar
+                var scale: [Double]
+                var mass: Double
+                var color: [Int]
+                
+                switch self.selectedObjectType {
+                case "sphere":
+                    scale = [Double.random(in: 0.02...0.06), 
+                             Double.random(in: 0.02...0.06), 
+                             Double.random(in: 0.02...0.06)]
+                    mass = Double.random(in: 0.3...1.0)
+                    
+                    // Toplar için canlı renkler
+                    color = [
+                        Int.random(in: 100...255), // Daha canlı
+                        Int.random(in: 100...255),
+                        Int.random(in: 100...255),
+                        255
+                    ]
+                    
+                case "cube":
+                    scale = [Double.random(in: 0.025...0.05), 
+                             Double.random(in: 0.025...0.05), 
+                             Double.random(in: 0.025...0.05)]
+                    mass = Double.random(in: 1.0...1.5) // Küpler biraz daha ağır
+                    
+                    // Küpler için koyu renkler
+                    color = [
+                        Int.random(in: 50...200),
+                        Int.random(in: 50...200),
+                        Int.random(in: 50...200),
+                        255
+                    ]
+                    
+                case "cylinder":
+                    scale = [Double.random(in: 0.025...0.04), 
+                             Double.random(in: 0.04...0.08), // Yükseklik farklı
+                             Double.random(in: 0.025...0.04)]
+                    mass = Double.random(in: 0.6...1.2)
+                    
+                    // Silindirler için daha sakin renkler
+                    color = [
+                        Int.random(in: 70...180),
+                        Int.random(in: 70...180),
+                        Int.random(in: 70...220),
+                        255
+                    ]
+                    
+                case "coin":
+                    // Coinler daha düzgün boyutlarda olsun
+                    let coinSize = Double.random(in: 0.04...0.06)
+                    scale = [coinSize, 0.008, coinSize]
+                    mass = 1.0 
+                    
+                    // Altın veya Gümüş renk seçeneği
+                    if Bool.random() { // %50 şans
+                        // Altın
+                        color = [215, 165, 25, 255]
+                    } else {
+                        // Gümüş
+                        color = [192, 192, 192, 255]
+                    }
+                    
+                    // Coinlerin daha düzgün düşmesi için başlangıç hızı
+                    initialVelocity = [
+                        Double.random(in: -0.1...0.1),
+                        -0.05, // Sabit düşüş
+                        Double.random(in: -0.1...0.1)
+                    ]
+                    
+                    // Coinlere daha çok dönüş ver
+                    initialAngularVelocity = [
+                        Double.random(in: -0.5...0.5),
+                        Double.random(in: -4...4),  // y ekseni etrafında daha hızlı dön
+                        Double.random(in: -0.5...0.5)
+                    ]
+                    
+                case "usdz":
+                    scale = [0.01, 0.01, 0.01] // USDZ modelleri genellikle daha büyüktür
+                    mass = Double.random(in: 0.5...1.5)
+                    
+                    // USDZ modeller için rastgele renk
+                    color = [
+                        Int.random(in: 50...255),
+                        Int.random(in: 50...255),
+                        Int.random(in: 50...255),
+                        255
+                    ]
+                    
+                default:
+                    scale = [0.05, 0.05, 0.05] 
+                    mass = 1.0
+                    color = [
+                        Int.random(in: 50...255),
+                        Int.random(in: 50...255),
+                        Int.random(in: 50...255),
+                        255
+                    ]
+                }
+                
+                // Benzersiz ID oluştur
+                let objectId = "rain_\(self.selectedObjectType)_\(i)_\(Date().timeIntervalSince1970)"
+                
+                // Obje datasını oluştur
+                let objectData: [String: Any] = [
+                    "id": objectId,
+                    "type": self.selectedObjectType,
+                    "position": [Double(randomX), Double(randomY), Double(randomZ)],
+                    "scale": scale,
+                    "color": color,
+                    "mass": mass,
+                    "velocity": initialVelocity,
+                    "angularVelocity": initialAngularVelocity
+                ]
+                
+                // Ana thread'de objeyi ekle
+                DispatchQueue.main.async {
+                    _ = self.addPhysicsObject(objectData: objectData)
+                }
+                
+                // Tüm objelerin aynı anda spawn edilmemesi için delay
+                if i % 3 == 0 {
+                    Thread.sleep(forTimeInterval: 0.03)
+                }
+            }
+        }
+        
+        return true
+    }
+    
+    /// Confirm that LiDAR mesh occlusion is enabled in the AR configuration
+    func confirmLiDAREnabled() {
+        if let configuration = arView.session.configuration as? ARWorldTrackingConfiguration,
+           ARWorldTrackingConfiguration.supportsSceneReconstruction(.mesh) {
+            
+            // Ensure mesh reconstruction is enabled
+            if configuration.sceneReconstruction != .mesh {
+                configuration.sceneReconstruction = .mesh
+                
+                print("PhysicsView: Re-enabling LiDAR mesh reconstruction")
+                // Rerun with the proper configuration
+                arView.session.run(configuration)
+            } else {
+                print("PhysicsView: LiDAR mesh reconstruction is already active")
+            }
+        } else {
+            print("PhysicsView: Device does not support LiDAR mesh reconstruction")
+        }
+    }
+    
     // MARK: - Private methods
     
     private func configurePhysicsWorld() {
@@ -551,19 +982,28 @@ extension PhysicsView: ARSessionDelegate {
     private func addMeshAnchor(_ meshAnchor: ARMeshAnchor) {
         let geometry = SCNGeometry.from(meshAnchor: meshAnchor)
         let material = SCNMaterial()
-        material.diffuse.contents = UIColor.clear
-        material.colorBufferWriteMask = []
-        material.writesToDepthBuffer = true
+        
+        // Proper occlusion material configuration
+        material.diffuse.contents = UIColor.clear // Invisible material
+        material.colorBufferWriteMask = [] // Don't write to color buffer
         material.isDoubleSided = true
+        material.writesToDepthBuffer = true // Write to depth buffer for occlusion
+        material.readsFromDepthBuffer = false
+        material.lightingModel = .constant // Not affected by lighting
+        
+        // Apply material to all geometry surfaces
         geometry.materials = [material]
 
         let node = SCNNode(geometry: geometry)
-        node.renderingOrder = -100
+        node.renderingOrder = -100 // Render before everything else
         node.opacity = 1.0
-        node.categoryBitMask = 4
+        node.categoryBitMask = 4 // Special mask for occlusion only
         node.castsShadow = false
         node.transform = SCNMatrix4(meshAnchor.transform)
 
+        // Add occlusion node to scene
         arView.scene.rootNode.addChildNode(node)
+        
+        print("Added mesh anchor for occlusion")
     }
 } 

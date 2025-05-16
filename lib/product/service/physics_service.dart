@@ -251,4 +251,58 @@ class PhysicsService {
       return false;
     }
   }
+
+  /// Zoom in/out on the model - scale factor is relative (1.0 is no change)
+  Future<bool> zoomModel(double scaleFactor) async {
+    try {
+      print(
+          'PhysicsService: Zooming model by factor: $scaleFactor, viewId: $_viewId');
+      final result = await _channel.invokeMethod<bool>('zoomModel', {
+        'scaleFactor': scaleFactor,
+        'viewId': _viewId,
+      });
+      return result ?? false;
+    } on PlatformException catch (e) {
+      print('Error zooming model: ${e.message}');
+      return false;
+    }
+  }
+
+  /// Set the selected object type in the physics simulation
+  Future<bool> setSelectedObject(String type) async {
+    try {
+      print(
+          'PhysicsService: Setting selected object type to: $type, viewId: $_viewId');
+      final result = await _channel.invokeMethod<bool>('setSelectedObject', {
+        'type': type,
+        'viewId': _viewId,
+      });
+      return result ?? false;
+    } on PlatformException catch (e) {
+      print('Error setting selected object type: ${e.message}');
+      return false;
+    }
+  }
+
+  /// Start raining objects of the specified type
+  Future<bool> startObjectRain({
+    required String type,
+    int count = 20,
+    double height = 2.0,
+  }) async {
+    try {
+      print(
+          'PhysicsService: Starting object rain with $count objects of type: $type, viewId: $_viewId');
+      final result = await _channel.invokeMethod<bool>('startObjectRain', {
+        'type': type,
+        'count': count,
+        'height': height,
+        'viewId': _viewId,
+      });
+      return result ?? false;
+    } on PlatformException catch (e) {
+      print('Error starting object rain: ${e.message}');
+      return false;
+    }
+  }
 }

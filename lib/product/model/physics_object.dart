@@ -10,7 +10,10 @@ enum PhysicsObjectType {
   cube,
 
   /// Cylinder object
-  cylinder;
+  cylinder,
+
+  /// Coin object (madeni para)
+  coin;
 
   /// Get an icon for this object type
   IconData get icon {
@@ -21,6 +24,8 @@ enum PhysicsObjectType {
         return Icons.crop_square;
       case PhysicsObjectType.cylinder:
         return Icons.toll;
+      case PhysicsObjectType.coin:
+        return Icons.monetization_on;
     }
   }
 
@@ -33,6 +38,8 @@ enum PhysicsObjectType {
         return 'Cube';
       case PhysicsObjectType.cylinder:
         return 'Cylinder';
+      case PhysicsObjectType.coin:
+        return 'Coin';
     }
   }
 }
