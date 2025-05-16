@@ -27,8 +27,8 @@ class InteractivePhysicsCubit extends Cubit<InteractivePhysicsState> {
       isLoading: true,
       error: null,
       isAlignmentComplete: false,
-      modelOffsetX: 0.0,
-      modelOffsetY: 0.0,
+      modelOffsetX: 0,
+      modelOffsetY: 0,
     ));
 
     try {
@@ -37,22 +37,25 @@ class InteractivePhysicsCubit extends Cubit<InteractivePhysicsState> {
         await _physicsService.initializePhysics(scanPath: scanPath);
 
         // Start FPS update timer
-        _fpsUpdateTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-          _updateFps();
-        });
+        _fpsUpdateTimer = Timer.periodic(
+          const Duration(seconds: 1),
+          (_) {
+            _updateFps();
+          },
+        );
 
         emit(state.copyWith(
           isLoading: false,
           isSimulationRunning: true,
         ));
       } else {
-        print('ARView not initialized yet. Waiting for view creation...');
+        debugPrint('ARView not initialized yet. Waiting for view creation...');
         emit(state.copyWith(
           isLoading: false,
           error: 'AR View not initialized. Please try again.',
         ));
       }
-    } catch (e) {
+    } on Exception catch (e) {
       emit(state.copyWith(
         isLoading: false,
         error: 'Failed to initialize physics: $e',
@@ -62,7 +65,7 @@ class InteractivePhysicsCubit extends Cubit<InteractivePhysicsState> {
 
   /// Set the AR view ID for platform view communication
   void setARViewId(int id) {
-    print('InteractivePhysicsCubit: Setting ARViewId to $id');
+    debugPrint('InteractivePhysicsCubit: Setting ARViewId to $id');
     _arViewId = id;
     _physicsService.setViewId(id);
 
@@ -78,23 +81,31 @@ class InteractivePhysicsCubit extends Cubit<InteractivePhysicsState> {
     if (!_isARViewValid() || !state.isSimulationRunning) return;
 
     try {
-      final success = await _physicsService.adjustModelPosition(deltaX, deltaY);
+      final success = await _physicsService.adjustModelPosition(
+        deltaX,
+        deltaY,
+      );
       if (success) {
-        print('InteractivePhysicsCubit: Model position adjusted successfully.');
+        debugPrint(
+          'InteractivePhysicsCubit: Model position adjusted successfully.',
+        );
       } else {
-        print(
-            'InteractivePhysicsCubit: Failed to adjust model position via service.');
+        debugPrint(
+          'InteractivePhysicsCubit: Failed to adjust model position via service.',
+        );
       }
-    } catch (e) {
-      print('InteractivePhysicsCubit: Error adjusting model position: $e');
+    } on Exception catch (e) {
+      debugPrint('InteractivePhysicsCubit: Error adjusting model position: $e');
     }
   }
 
   /// Rotate the model around its Y axis
   Future<void> rotateModelY(double angle) async {
     if (_arViewId < 0 || !state.isSimulationRunning) {
-      print(
-          'Cannot rotate model: ARViewId = $_arViewId, isSimulationRunning = ${state.isSimulationRunning}');
+      debugPrint(
+        'Cannot rotate model: ARViewId = $_arViewId, '
+        'isSimulationRunning = ${state.isSimulationRunning}',
+      );
       return;
     }
 
@@ -103,11 +114,11 @@ class InteractivePhysicsCubit extends Cubit<InteractivePhysicsState> {
       final success = await _physicsService.rotateModelY(angle);
 
       if (success) {
-        print('Model rotated by angle: $angle');
+        debugPrint('Model rotated by angle: $angle');
       } else {
-        print('Failed to rotate model');
+        debugPrint('Failed to rotate model');
       }
-    } catch (e) {
+    } on Exception catch (e) {
       debugPrint('Error rotating model: $e');
     }
   }
@@ -115,8 +126,9 @@ class InteractivePhysicsCubit extends Cubit<InteractivePhysicsState> {
   /// Zoom in/out on the model - scale factor is relative (1.0 is no change)
   Future<void> zoomModel(double scaleFactor) async {
     if (_arViewId < 0 || !state.isSimulationRunning) {
-      print(
-          'Cannot zoom model: ARViewId = $_arViewId, isSimulationRunning = ${state.isSimulationRunning}');
+      debugPrint(
+        'Cannot zoom model: ARViewId = $_arViewId, isSimulationRunning = ${state.isSimulationRunning}',
+      );
       return;
     }
 
@@ -125,11 +137,11 @@ class InteractivePhysicsCubit extends Cubit<InteractivePhysicsState> {
       final success = await _physicsService.zoomModel(scaleFactor);
 
       if (success) {
-        print('Model zoomed by factor: $scaleFactor');
+        debugPrint('Model zoomed by factor: $scaleFactor');
       } else {
-        print('Failed to zoom model');
+        debugPrint('Failed to zoom model');
       }
-    } catch (e) {
+    } on Exception catch (e) {
       debugPrint('Error zooming model: $e');
     }
   }
@@ -146,51 +158,62 @@ class InteractivePhysicsCubit extends Cubit<InteractivePhysicsState> {
         // Optionally, if you were tracking offsets in Flutter state for some reason,
         // you might want to reset them here too, though it seems less relevant now.
         // emit(state.copyWith(modelOffsetX: 0.0, modelOffsetY: 0.0));
-        print(
-            'InteractivePhysicsCubit: Model position and rotation reset to origin successfully.');
+        debugPrint(
+          'InteractivePhysicsCubit: Model position and rotation reset to origin successfully.',
+        );
       } else {
-        print(
-            'InteractivePhysicsCubit: Failed to reset model position to origin via service.');
+        debugPrint(
+          'InteractivePhysicsCubit: Failed to reset model position to origin via service.',
+        );
       }
-    } catch (e) {
-      print(
-          'InteractivePhysicsCubit: Error resetting model position to origin: $e');
+    } on Exception catch (e) {
+      debugPrint(
+        'InteractivePhysicsCubit: Error resetting model position to origin: $e',
+      );
     }
   }
 
   /// Complete the alignment phase and start using the physics simulation
-  void completeAlignment() async {
+  Future<void> completeAlignment() async {
     if (state.isAlignmentComplete) return; // Avoid running if already complete
 
     emit(state.copyWith(isAlignmentComplete: true));
-    print(
-        'InteractivePhysicsCubit: Alignment completed. Ready for physics interaction.');
+    debugPrint(
+      'InteractivePhysicsCubit: Alignment completed. Ready for physics interaction.',
+    );
 
     // Give a moment for the physics to stabilize before hiding mesh
-    await Future.delayed(const Duration(milliseconds: 500));
+    await Future<void>.delayed(const Duration(milliseconds: 500));
 
-    bool meshHiddenSuccessfully = false;
+    var meshHiddenSuccessfully = false;
     try {
-      print(
-          'InteractivePhysicsCubit: Setting mesh to invisible to enable occlusion');
-      bool success = await _physicsService.setMeshVisibility(false);
+      debugPrint(
+        'InteractivePhysicsCubit: Setting mesh to invisible to enable occlusion',
+      );
+      var success = await _physicsService.setMeshVisibility(visible: false);
       if (!success) {
-        print(
-            'InteractivePhysicsCubit: Warning - First attempt to make mesh invisible failed, retrying...');
-        await Future.delayed(const Duration(milliseconds: 500));
-        success = await _physicsService.setMeshVisibility(false);
+        debugPrint(
+          'InteractivePhysicsCubit: Warning - First attempt to make mesh '
+          'invisible failed, retrying...',
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+        success = await _physicsService.setMeshVisibility(visible: false);
       }
       meshHiddenSuccessfully = success;
 
       if (!meshHiddenSuccessfully) {
-        print(
-            'InteractivePhysicsCubit: Error - Failed to make mesh invisible after multiple attempts');
+        debugPrint(
+          'InteractivePhysicsCubit: Error - Failed to make mesh invisible '
+          'after multiple attempts',
+        );
       } else {
-        print(
-            'InteractivePhysicsCubit: Successfully hidden mesh and enabled real-world occlusion');
+        debugPrint(
+          'InteractivePhysicsCubit: Successfully hidden mesh and enabled '
+          'real-world occlusion',
+        );
       }
-    } catch (e) {
-      print('InteractivePhysicsCubit: Error setting mesh visibility: $e');
+    } on Exception catch (e) {
+      debugPrint('InteractivePhysicsCubit: Error setting mesh visibility: $e');
     }
   }
 
@@ -205,11 +228,13 @@ class InteractivePhysicsCubit extends Cubit<InteractivePhysicsState> {
       }
       _spawnRandomObject();
     });
-    print('InteractivePhysicsCubit: Object rain started.');
+    debugPrint('InteractivePhysicsCubit: Object rain started.');
     // Spawn a few objects immediately to kick things off
-    for (int i = 0; i < 3; i++) {
-      Future.delayed(
-          Duration(milliseconds: 300 * i + 100), () => _spawnRandomObject());
+    for (var i = 0; i < 3; i++) {
+      Future<void>.delayed(
+        Duration(milliseconds: 300 * i + 100),
+        _spawnRandomObject,
+      );
     }
   }
 
@@ -217,7 +242,7 @@ class InteractivePhysicsCubit extends Cubit<InteractivePhysicsState> {
   void _stopObjectRain() {
     _objectRainTimer?.cancel();
     _objectRainTimer = null;
-    print('InteractivePhysicsCubit: Object rain stopped.');
+    debugPrint('InteractivePhysicsCubit: Object rain stopped.');
   }
 
   /// Spawn a random object above the scene to simulate raining objects.
@@ -232,13 +257,15 @@ class InteractivePhysicsCubit extends Cubit<InteractivePhysicsState> {
       // Get camera position to spawn object above and slightly around it
       final cameraPosition = await _physicsService.getCameraPosition();
       if (cameraPosition == null || cameraPosition.length < 3) {
-        print(
-            'InteractivePhysicsCubit: Failed to get camera position for spawning object.');
+        debugPrint(
+          'InteractivePhysicsCubit: Failed to get camera position for '
+          'spawning object.',
+        );
         return;
       }
 
       // Choose random object type
-      final objectTypes = PhysicsObjectType.values;
+      const objectTypes = PhysicsObjectType.values;
       final randomType = objectTypes[_random.nextInt(objectTypes.length)];
 
       // Position above camera with random horizontal offset
@@ -255,35 +282,35 @@ class InteractivePhysicsCubit extends Cubit<InteractivePhysicsState> {
       ];
 
       final object = PhysicsObject(
-        id: 'rain_${DateTime.now().millisecondsSinceEpoch}_${_random.nextInt(1000)}',
+        id: 'rain_${DateTime.now().millisecondsSinceEpoch}_'
+            '${_random.nextInt(1000)}',
         type: randomType,
         position: spawnPosition,
-        rotation: _getRandomRotation(), // Assuming _getRandomRotation() exists
-        scale: _getScaleForObjectType(
-            randomType), // Assuming _getScaleForObjectType() exists
-        velocity: [0, -0.5, 0], // Slight initial downward velocity
+        rotation: _getRandomRotation(),
+        scale: _getScaleForObjectType(randomType),
+        velocity: const [0, -0.5, 0], // Slight initial downward velocity
         angularVelocity: [
           _random.nextDouble() * 1.0 - 0.5,
           _random.nextDouble() * 1.0 - 0.5,
           _random.nextDouble() * 1.0 - 0.5,
         ],
-        mass: _getMassForObjectType(
-            randomType), // Assuming _getMassForObjectType() exists
-        color: _getRandomColor(), // Assuming _getRandomColor() exists
+        mass: _getMassForObjectType(randomType),
+        color: _getRandomColor(),
       );
 
       final success = await _physicsService.addPhysicsObject(object);
       if (success) {
-        // Optionally, update local state if you need to track rained objects in Flutter
-        // final updatedObjects = List<PhysicsObject>.from(state.objects)..add(object);
-        // emit(state.copyWith(objects: updatedObjects));
-        print('InteractivePhysicsCubit: Spawned random object: ${object.id}');
+        debugPrint(
+          'InteractivePhysicsCubit: Spawned random object: ${object.id}',
+        );
       } else {
-        print(
-            'InteractivePhysicsCubit: Failed to add rained object ${object.id} via service.');
+        debugPrint(
+          'InteractivePhysicsCubit: Failed to add rained object ${object.id} '
+          'via service.',
+        );
       }
-    } catch (e) {
-      print('InteractivePhysicsCubit: Error spawning random object: $e');
+    } on Exception catch (e) {
+      debugPrint('InteractivePhysicsCubit: Error spawning random object: $e');
     }
   }
 
@@ -320,8 +347,11 @@ class InteractivePhysicsCubit extends Cubit<InteractivePhysicsState> {
     if (_arViewId < 0 ||
         !state.isSimulationRunning ||
         !state.isAlignmentComplete) {
-      print(
-          'Cannot place object: ARViewId = $_arViewId, isSimulationRunning = ${state.isSimulationRunning}, isAlignmentComplete = ${state.isAlignmentComplete}');
+      debugPrint(
+        'Cannot place object: ARViewId = $_arViewId, '
+        'isSimulationRunning = ${state.isSimulationRunning}, '
+        'isAlignmentComplete = ${state.isAlignmentComplete}',
+      );
       return;
     }
 
@@ -329,21 +359,22 @@ class InteractivePhysicsCubit extends Cubit<InteractivePhysicsState> {
       // Convert screen coordinates to world position
       final worldPosition = await _physicsService.screenToWorldPosition(x, y);
       if (worldPosition == null) {
-        print('Failed to convert screen position to world position');
+        debugPrint('Failed to convert screen position to world position');
         return;
       }
 
-      print('Placing object at world position: $worldPosition');
+      debugPrint('Placing object at world position: $worldPosition');
 
       // Create new physics object
       final object = PhysicsObject(
-        id: 'obj_${DateTime.now().millisecondsSinceEpoch}_${_random.nextInt(1000)}',
+        id: 'obj_${DateTime.now().millisecondsSinceEpoch}_'
+            '${_random.nextInt(1000)}',
         type: state.selectedObjectType,
         position: worldPosition,
-        rotation: [0, 0, 0, 1], // Identity quaternion
+        rotation: const [0, 0, 0, 1], // Identity quaternion
         scale: _getScaleForObjectType(state.selectedObjectType),
-        velocity: [0, 0, 0],
-        angularVelocity: [0, 0, 0],
+        velocity: const [0, 0, 0],
+        angularVelocity: const [0, 0, 0],
         mass: _getMassForObjectType(state.selectedObjectType),
         color: _getRandomColor(),
       );
@@ -352,14 +383,14 @@ class InteractivePhysicsCubit extends Cubit<InteractivePhysicsState> {
       final success = await _physicsService.addPhysicsObject(object);
 
       if (success) {
-        print('Successfully added object ${object.id}');
+        debugPrint('Successfully added object ${object.id}');
         final updatedObjects = List<PhysicsObject>.from(state.objects)
           ..add(object);
         emit(state.copyWith(objects: updatedObjects));
       } else {
-        print('Failed to add object ${object.id}');
+        debugPrint('Failed to add object ${object.id}');
       }
-    } catch (e) {
+    } on Exception catch (e) {
       // Handle error (optionally show toast or snackbar)
       debugPrint('Error placing object: $e');
     }
@@ -373,14 +404,16 @@ class InteractivePhysicsCubit extends Cubit<InteractivePhysicsState> {
     try {
       await _physicsService.clearObjects();
       emit(state
-          .copyWith(objects: [])); // Clear objects from Flutter state as well
-      print('InteractivePhysicsCubit: Simulation reset. All objects cleared.');
+          .copyWith(objects: const [])); // Clear objects from Flutter state
+      debugPrint(
+        'InteractivePhysicsCubit: Simulation reset. All objects cleared.',
+      );
       // Restart the object rain if alignment was already complete
       if (state.isAlignmentComplete) {
         _startObjectRain();
       }
-    } catch (e) {
-      print('InteractivePhysicsCubit: Error resetting simulation: $e');
+    } on Exception catch (e) {
+      debugPrint('InteractivePhysicsCubit: Error resetting simulation: $e');
     }
   }
 
@@ -394,7 +427,7 @@ class InteractivePhysicsCubit extends Cubit<InteractivePhysicsState> {
     _objectRainTimer = null;
     _fpsUpdateTimer = null;
 
-    print('Physics simulation stopped completely');
+    debugPrint('Physics simulation stopped completely');
 
     // Don't need to call dispose on _physicsService here as the cubit's close method will do that
   }
@@ -408,19 +441,24 @@ class InteractivePhysicsCubit extends Cubit<InteractivePhysicsState> {
   ///
   /// @param visible true to show the mesh (make it opaque)
   ///               false to hide the mesh (make it invisible but maintain physics)
-  Future<void> toggleMeshVisibility(bool visible) async {
+  Future<void> toggleMeshVisibility({required bool isVisible}) async {
     if (!_isARViewValid() || !state.isSimulationRunning) return;
 
     try {
-      final success = await _physicsService.setMeshVisibility(visible);
+      final success =
+          await _physicsService.setMeshVisibility(visible: isVisible);
       if (success) {
-        print(
-            'InteractivePhysicsCubit: Mesh visibility set to: ${visible ? "VISIBLE" : "HIDDEN"}');
+        debugPrint(
+          'InteractivePhysicsCubit: Mesh visibility set to: '
+          '${isVisible ? "VISIBLE" : "HIDDEN"}',
+        );
       } else {
-        print('InteractivePhysicsCubit: Failed to set mesh visibility');
+        debugPrint(
+          'InteractivePhysicsCubit: Failed to set mesh visibility',
+        );
       }
-    } catch (e) {
-      print('InteractivePhysicsCubit: Error setting mesh visibility: $e');
+    } on Exception catch (e) {
+      debugPrint('InteractivePhysicsCubit: Error setting mesh visibility: $e');
     }
   }
 
@@ -432,9 +470,11 @@ class InteractivePhysicsCubit extends Cubit<InteractivePhysicsState> {
 
     try {
       await _physicsService.setSelectedObject(type);
-      print('InteractivePhysicsCubit: Selected object type set to: $type');
-    } catch (e) {
-      print('InteractivePhysicsCubit: Error setting object type: $e');
+      debugPrint(
+        'InteractivePhysicsCubit: Selected object type set to: $type',
+      );
+    } on Exception catch (e) {
+      debugPrint('InteractivePhysicsCubit: Error setting object type: $e');
     }
   }
 
@@ -456,10 +496,11 @@ class InteractivePhysicsCubit extends Cubit<InteractivePhysicsState> {
         count: count,
         height: height,
       );
-      print(
-          'InteractivePhysicsCubit: Started raining $count objects of type: $type');
-    } catch (e) {
-      print('InteractivePhysicsCubit: Error starting object rain: $e');
+      debugPrint(
+        'InteractivePhysicsCubit: Started raining $count objects of type: $type',
+      );
+    } on Exception catch (e) {
+      debugPrint('InteractivePhysicsCubit: Error starting object rain: $e');
     }
   }
 
@@ -468,7 +509,7 @@ class InteractivePhysicsCubit extends Cubit<InteractivePhysicsState> {
     _stopObjectRain(); // Stop object rain when Cubit is closed
     _fpsUpdateTimer?.cancel();
     // _physicsService.dispose(); // This is often handled by GetIt or the service itself if it has a dispose method managed elsewhere
-    print('InteractivePhysicsCubit: Closed and timers cancelled.');
+    debugPrint('InteractivePhysicsCubit: Closed and timers cancelled.');
     return super.close();
   }
 
@@ -479,7 +520,7 @@ class InteractivePhysicsCubit extends Cubit<InteractivePhysicsState> {
     try {
       final fps = await _physicsService.getFps();
       emit(state.copyWith(fps: fps));
-    } catch (e) {
+    } on Exception catch (e) {
       debugPrint('Error updating FPS: $e');
     }
   }
@@ -500,13 +541,13 @@ class InteractivePhysicsCubit extends Cubit<InteractivePhysicsState> {
   double _getMassForObjectType(PhysicsObjectType type) {
     switch (type) {
       case PhysicsObjectType.sphere:
-        return 5.0;
+        return 5;
       case PhysicsObjectType.cube:
-        return 10.0;
+        return 10;
       case PhysicsObjectType.cylinder:
         return 7.5;
       case PhysicsObjectType.coin:
-        return 2.0;
+        return 2;
     }
   }
 
@@ -515,7 +556,7 @@ class InteractivePhysicsCubit extends Cubit<InteractivePhysicsState> {
       _random.nextInt(255),
       _random.nextInt(255),
       _random.nextInt(255),
-      1.0,
+      1,
     );
   }
 

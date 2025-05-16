@@ -1,15 +1,15 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:lidar_scanner/feature/interactive_physics/cubit/interactive_physics_cubit.dart';
-import 'package:lidar_scanner/feature/interactive_physics/cubit/interactive_physics_state.dart';
+import 'package:lidar_scanner/feature/interactive_physics/cubit/interactive_physics_cubit.dart'
+    as physics_cubit;
+import 'package:lidar_scanner/feature/interactive_physics/cubit/interactive_physics_state.dart'
+    as physics_state;
 import 'package:lidar_scanner/feature/interactive_physics/mixin/interactive_physics_mixin.dart';
-import 'package:lidar_scanner/feature/interactive_physics/widgets/object_toolbar.dart';
-import 'package:lidar_scanner/product/model/physics_object.dart';
-import 'dart:math' as math;
 
 /// View for the interactive physics feature that allows users to place virtual objects
-/// in their scanned environment and watch them interact with real-world objects.
 class InteractivePhysicsView extends StatefulWidget {
   const InteractivePhysicsView({
     required this.scanPath,
@@ -51,7 +51,8 @@ class _InteractivePhysicsViewState extends State<InteractivePhysicsView>
           ),
         ],
       ),
-      body: BlocBuilder<InteractivePhysicsCubit, InteractivePhysicsState>(
+      body: BlocBuilder<physics_cubit.InteractivePhysicsCubit,
+          physics_state.InteractivePhysicsState>(
         bloc: physicsCubit,
         builder: (context, state) {
           return Stack(
@@ -132,7 +133,7 @@ class _InteractivePhysicsViewState extends State<InteractivePhysicsView>
                       // World alignment controls
                       if (!state.isAlignmentComplete)
                         Padding(
-                          padding: const EdgeInsets.only(bottom: 16.0),
+                          padding: const EdgeInsets.only(bottom: 16),
                           child: _AlignmentControls(
                             onConfirmAlignment: () {
                               physicsCubit.completeAlignment();
@@ -148,7 +149,7 @@ class _InteractivePhysicsViewState extends State<InteractivePhysicsView>
                       // Object toolbar is optional after alignment is complete
                       if (state.isAlignmentComplete)
                         Padding(
-                          padding: const EdgeInsets.only(bottom: 16.0),
+                          padding: const EdgeInsets.only(bottom: 16),
                           child: _ObjectControls(
                             onClearObjects: () {
                               physicsCubit.resetSimulation();
@@ -172,7 +173,8 @@ class _InteractivePhysicsViewState extends State<InteractivePhysicsView>
                     padding: const EdgeInsets.all(12),
                     margin: const EdgeInsets.symmetric(horizontal: 20),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.7),
+                      color: Colors.black
+                          .withValues(alpha: 178, red: 0, green: 0, blue: 0),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: const Text(
@@ -215,7 +217,7 @@ class _PhysicsARView extends StatefulWidget {
     required this.onZoomUpdate,
   });
 
-  final InteractivePhysicsCubit physicsCubit;
+  final physics_cubit.InteractivePhysicsCubit physicsCubit;
   final String scanPath;
   final void Function(Offset position) onTap;
   final void Function(double offsetX, double offsetY)? onAdjustPosition;
@@ -257,33 +259,26 @@ class _PhysicsARViewState extends State<_PhysicsARView> {
             child: GestureDetector(
               onTapUp: (details) => widget.onTap(details.localPosition),
               onScaleStart: (details) {
-                // Başlangıç ölçek faktörünü kaydet
                 _previousScale = 1.0;
               },
               onScaleUpdate: (details) {
                 if (details.pointerCount == 1) {
-                  // Single finger drag for movement
-                  if (widget.onAdjustPosition != null) {
-                    widget.onAdjustPosition!(
-                        details.focalPointDelta.dx, details.focalPointDelta.dy);
-                  }
+                  widget.onAdjustPosition?.call(
+                    details.focalPointDelta.dx,
+                    details.focalPointDelta.dy,
+                  );
                 } else if (details.pointerCount == 2) {
-                  // İki parmak kullanıldığında
                   if (details.rotation != 0.0 &&
                       widget.onRotationUpdate != null) {
-                    // Rotasyon değişimi varsa
                     final angle = details.rotation * 180 / math.pi;
                     widget.onRotationUpdate!(angle);
                   }
 
-                  // Zoom değişimi
                   if (details.scale != 1.0 && widget.onZoomUpdate != null) {
-                    // Göreceli ölçek değişimini hesapla
                     final relativeScale = details.scale / _previousScale;
                     _previousScale = details.scale;
 
-                    // 0.95-1.05 aralığındaki küçük değişimleri filtrele
-                    if (relativeScale < 0.95 || relativeScale > 1.05) {
+                    if (relativeScale < 95 / 100 || relativeScale > 105 / 100) {
                       widget.onZoomUpdate!(relativeScale);
                     }
                   }
@@ -298,7 +293,7 @@ class _PhysicsARViewState extends State<_PhysicsARView> {
   }
 
   void _onPlatformViewCreated(int id) {
-    print('PhysicsARView: View created with ID $id');
+    debugPrint('PhysicsARView: View created with ID $id');
     widget.physicsCubit.setARViewId(id);
 
     // Initialize physics after AR view is created
@@ -353,7 +348,7 @@ class _AlignmentControls extends StatelessWidget {
   });
 
   final VoidCallback onConfirmAlignment;
-  final Function(double, double) onAdjustPosition;
+  final void Function(double dx, double dy) onAdjustPosition;
   final VoidCallback onResetAlignment;
 
   @override
@@ -362,18 +357,26 @@ class _AlignmentControls extends StatelessWidget {
       padding: const EdgeInsets.all(8),
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.black87,
+        color: Colors.black.withValues(
+          alpha: 221,
+          red: 0,
+          green: 0,
+          blue: 0,
+        ),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           const Padding(
-            padding: EdgeInsets.all(8.0),
+            padding: EdgeInsets.all(8),
             child: Text(
-              'Drag to move, pinch and rotate with two fingers to turn the model',
-              style:
-                  TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              'Drag to move, pinch and rotate with two fingers to turn the '
+              'model',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
               textAlign: TextAlign.center,
             ),
           ),
@@ -381,28 +384,44 @@ class _AlignmentControls extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              // Reset button
               TextButton.icon(
                 icon: const Icon(Icons.refresh, color: Colors.white),
-                label:
-                    const Text('Reset', style: TextStyle(color: Colors.white)),
+                label: const Text(
+                  'Reset',
+                  style: TextStyle(color: Colors.white),
+                ),
                 onPressed: onResetAlignment,
                 style: TextButton.styleFrom(
-                  backgroundColor: Colors.red.withOpacity(0.5),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  backgroundColor: Colors.red.withValues(
+                    alpha: 128,
+                    red: 255,
+                    green: 0,
+                    blue: 0,
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                 ),
               ),
-              // Confirm alignment button
               TextButton.icon(
                 icon: const Icon(Icons.check_circle, color: Colors.white),
-                label: const Text('Confirm',
-                    style: TextStyle(color: Colors.white)),
+                label: const Text(
+                  'Confirm',
+                  style: TextStyle(color: Colors.white),
+                ),
                 onPressed: onConfirmAlignment,
                 style: TextButton.styleFrom(
-                  backgroundColor: Colors.green.withOpacity(0.8),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  backgroundColor: Colors.green.withValues(
+                    alpha: 204,
+                    red: 76,
+                    green: 175,
+                    blue: 80,
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                 ),
               ),
             ],
@@ -415,9 +434,9 @@ class _AlignmentControls extends StatelessWidget {
 
 // Movement precision values
 enum _MovementPrecisionValue {
-  fine(0.01, 'Fine'),
-  medium(0.05, 'Medium'),
-  coarse(0.1, 'Coarse');
+  fine(1 / 100, 'Fine'),
+  medium(5 / 100, 'Medium'),
+  coarse(1 / 10, 'Coarse');
 
   const _MovementPrecisionValue(this.value, this.label);
   final double value;
@@ -426,9 +445,7 @@ enum _MovementPrecisionValue {
 
 // Singleton to track current precision
 class _MovementPrecision {
-  static _MovementPrecisionValue _precision = _MovementPrecisionValue.medium;
-  static _MovementPrecisionValue get current => _precision;
-  static set current(_MovementPrecisionValue value) => _precision = value;
+  static _MovementPrecisionValue current = _MovementPrecisionValue.medium;
 }
 
 // Precision selector widget
@@ -462,40 +479,18 @@ class _PrecisionSelectorState extends State<_PrecisionSelector> {
             });
           },
           style: ButtonStyle(
-            backgroundColor: MaterialStateProperty.resolveWith<Color>(
-              (Set<MaterialState> states) {
-                if (states.contains(MaterialState.selected)) {
+            backgroundColor: WidgetStateProperty.resolveWith<Color>(
+              (Set<WidgetState> states) {
+                if (states.contains(WidgetState.selected)) {
                   return Colors.blue.shade600;
                 }
                 return Colors.grey.shade800;
               },
             ),
-            foregroundColor: MaterialStateProperty.all(Colors.white),
+            foregroundColor: WidgetStateProperty.all(Colors.white),
           ),
         ),
       ],
-    );
-  }
-}
-
-class _DirectionButton extends StatelessWidget {
-  const _DirectionButton({
-    required this.icon,
-    required this.onPressed,
-  });
-
-  final IconData icon;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return IconButton(
-      icon: Icon(icon, color: Colors.white),
-      onPressed: onPressed,
-      style: IconButton.styleFrom(
-        backgroundColor: Colors.blue.withOpacity(0.5),
-        padding: const EdgeInsets.all(12),
-      ),
     );
   }
 }
@@ -507,107 +502,38 @@ class _ObjectControls extends StatefulWidget {
   });
 
   final VoidCallback onClearObjects;
-  final InteractivePhysicsCubit physicsCubit;
+  final physics_cubit.InteractivePhysicsCubit physicsCubit;
 
   @override
   State<_ObjectControls> createState() => _ObjectControlsState();
 }
 
 class _ObjectControlsState extends State<_ObjectControls> {
-  // Track if mesh is visible - default false means mesh is hidden
   bool _isMeshVisible = false;
-  // Current selected object type
   String _selectedObjectType = 'sphere';
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12),
-      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.all(8),
+      margin: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.7),
+        color: Colors.black.withValues(alpha: 178, red: 0, green: 0, blue: 0),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Object type selector
           _buildObjectSelector(),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.center,
             children: [
-              // Drop objects button
-              TextButton.icon(
-                icon: const Icon(Icons.cloud_download,
-                    color: Colors.white, size: 24),
-                label: Text(
-                  'Rain $_selectedObjectType'.toUpperCase(),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                onPressed: () {
-                  widget.physicsCubit.startObjectRain(
-                    type: _selectedObjectType,
-                    count: 30, // Daha fazla obje yağdıralım
-                    height: 2.5, // Biraz daha yüksekten
-                  );
-                },
-                style: TextButton.styleFrom(
-                  backgroundColor: Colors.green.shade700.withOpacity(0.8),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              // Hide/Show mesh button
-              TextButton.icon(
-                icon: Icon(
-                  _isMeshVisible ? Icons.grid_off : Icons.grid_on,
-                  color: Colors.white,
-                ),
-                label: Text(
-                  _isMeshVisible ? 'Hide Mesh' : 'Show Mesh',
-                  style: const TextStyle(color: Colors.white),
-                ),
-                onPressed: () {
-                  // Toggle mesh visibility state
-                  setState(() {
-                    _isMeshVisible = !_isMeshVisible;
-                  });
-
-                  // _isMeshVisible=true  → show the mesh (opaque)
-                  // _isMeshVisible=false → hide the mesh (invisible but maintains physics)
-                  widget.physicsCubit.toggleMeshVisibility(_isMeshVisible);
-
-                  print(
-                      "Mesh visibility toggled: ${_isMeshVisible ? 'VISIBLE' : 'HIDDEN'}");
-                },
-                style: TextButton.styleFrom(
-                  backgroundColor: _isMeshVisible
-                      ? Colors.orange.withOpacity(0.6)
-                      : Colors.blue.withOpacity(0.6),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                ),
-              ),
-              const SizedBox(width: 8),
-              TextButton.icon(
-                icon: const Icon(Icons.delete_sweep, color: Colors.white),
-                label: const Text('Clear All',
-                    style: TextStyle(color: Colors.white)),
-                onPressed: widget.onClearObjects,
-                style: TextButton.styleFrom(
-                  backgroundColor: Colors.red.withOpacity(0.6),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                ),
-              ),
+              _buildRainButton(),
+              _buildMeshButton(),
+              _buildClearButton(),
             ],
           ),
         ],
@@ -615,9 +541,169 @@ class _ObjectControlsState extends State<_ObjectControls> {
     );
   }
 
+  Widget _buildRainButton() {
+    return TextButton.icon(
+      icon: const Icon(Icons.cloud_download, color: Colors.white, size: 20),
+      label: FittedBox(
+        child: Text(
+          'Rain $_selectedObjectType',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 12,
+          ),
+        ),
+      ),
+      onPressed: () {
+        widget.physicsCubit.startObjectRain(
+          type: _selectedObjectType,
+          count: 30,
+          height: 25 / 10,
+        );
+      },
+      style: ButtonStyle(
+        backgroundColor: MaterialStateProperty.all(
+          Colors.green.shade700.withValues(
+            alpha: 204,
+            red: 56,
+            green: 142,
+            blue: 60,
+          ),
+        ),
+        padding: MaterialStateProperty.all(
+          const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 8,
+          ),
+        ),
+        shape: MaterialStateProperty.all(
+          RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+        elevation: MaterialStateProperty.all(2),
+        shadowColor: MaterialStateProperty.all(Colors.black.withOpacity(0.3)),
+        overlayColor: MaterialStateProperty.resolveWith<Color>(
+          (Set<MaterialState> states) {
+            if (states.contains(MaterialState.pressed)) {
+              return Colors.white.withOpacity(0.2);
+            }
+            return Colors.transparent;
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMeshButton() {
+    return TextButton.icon(
+      icon: Icon(
+        _isMeshVisible ? Icons.grid_off : Icons.grid_on,
+        color: Colors.white,
+        size: 20,
+      ),
+      label: Text(
+        _isMeshVisible ? 'Hide' : 'Show',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 12,
+        ),
+      ),
+      onPressed: () {
+        setState(() {
+          _isMeshVisible = !_isMeshVisible;
+        });
+        widget.physicsCubit.toggleMeshVisibility(isVisible: _isMeshVisible);
+      },
+      style: ButtonStyle(
+        backgroundColor: MaterialStateProperty.all(
+          _isMeshVisible
+              ? Colors.orange.withValues(
+                  alpha: 153,
+                  red: 255,
+                  green: 165,
+                  blue: 0,
+                )
+              : Colors.blue.withValues(
+                  alpha: 153,
+                  red: 33,
+                  green: 150,
+                  blue: 243,
+                ),
+        ),
+        padding: MaterialStateProperty.all(
+          const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 8,
+          ),
+        ),
+        shape: MaterialStateProperty.all(
+          RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+        elevation: MaterialStateProperty.all(2),
+        shadowColor: MaterialStateProperty.all(Colors.black.withOpacity(0.3)),
+        overlayColor: MaterialStateProperty.resolveWith<Color>(
+          (Set<MaterialState> states) {
+            if (states.contains(MaterialState.pressed)) {
+              return Colors.white.withOpacity(0.2);
+            }
+            return Colors.transparent;
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildClearButton() {
+    return TextButton.icon(
+      icon: const Icon(Icons.delete_sweep, color: Colors.white, size: 20),
+      label: const Text(
+        'Clear',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 12,
+        ),
+      ),
+      onPressed: widget.onClearObjects,
+      style: ButtonStyle(
+        backgroundColor: MaterialStateProperty.all(
+          Colors.red.withValues(
+            alpha: 153,
+            red: 244,
+            green: 67,
+            blue: 54,
+          ),
+        ),
+        padding: MaterialStateProperty.all(
+          const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 8,
+          ),
+        ),
+        shape: MaterialStateProperty.all(
+          RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+        elevation: MaterialStateProperty.all(2),
+        shadowColor: MaterialStateProperty.all(Colors.black.withOpacity(0.3)),
+        overlayColor: MaterialStateProperty.resolveWith<Color>(
+          (Set<MaterialState> states) {
+            if (states.contains(MaterialState.pressed)) {
+              return Colors.white.withOpacity(0.2);
+            }
+            return Colors.transparent;
+          },
+        ),
+      ),
+    );
+  }
+
   Widget _buildObjectSelector() {
-    return Container(
-      height: 90,
+    return SizedBox(
+      height: 80,
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: [
@@ -634,32 +720,48 @@ class _ObjectControlsState extends State<_ObjectControls> {
   Widget _objectOption(String type, String label, IconData icon) {
     final isSelected = _selectedObjectType == type;
 
-    return GestureDetector(
+    return InkWell(
       onTap: () {
         setState(() {
           _selectedObjectType = type;
         });
-
-        // Send the selection to iOS
         widget.physicsCubit.setSelectedObjectType(type);
       },
+      borderRadius: BorderRadius.circular(8),
+      splashColor: Colors.white.withOpacity(0.2),
+      highlightColor: Colors.white.withOpacity(0.1),
       child: Container(
-        width: 80,
-        margin: const EdgeInsets.symmetric(horizontal: 8),
+        width: 70,
+        margin: const EdgeInsets.symmetric(horizontal: 4),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.blue : Colors.grey.shade800,
-          borderRadius: BorderRadius.circular(12),
+          color: isSelected
+              ? Colors.blue.withValues(
+                  alpha: 255,
+                  red: 33,
+                  green: 150,
+                  blue: 243,
+                )
+              : Colors.grey.shade800,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 2,
+              offset: const Offset(0, 1),
+            ),
+          ],
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: Colors.white, size: 32),
+            Icon(icon, color: Colors.white, size: 28),
             const SizedBox(height: 4),
             Text(
               label,
               style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w500,
+                fontSize: 12,
               ),
             ),
           ],

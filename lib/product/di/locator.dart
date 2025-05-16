@@ -22,6 +22,7 @@ Future<void> configureDependencies() async {
 
   if (!locator.isRegistered<InteractivePhysicsCubit>()) {
     locator.registerFactory<InteractivePhysicsCubit>(
-        () => InteractivePhysicsCubit(locator<PhysicsService>()));
+      () => InteractivePhysicsCubit(locator<PhysicsService>()),
+    );
   }
 }
