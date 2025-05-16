@@ -73,6 +73,11 @@ class _InteractivePhysicsViewState extends State<InteractivePhysicsView>
                         physicsCubit.rotateModelY(angle * 0.05);
                       }
                     : null,
+                onZoomUpdate: !state.isAlignmentComplete
+                    ? (scale) {
+                        physicsCubit.zoomModel(scale);
+                      }
+                    : null,
               ),
 
               // Loading indicator
@@ -207,6 +212,7 @@ class _PhysicsARView extends StatefulWidget {
     required this.onTap,
     required this.onAdjustPosition,
     required this.onRotationUpdate,
+    required this.onZoomUpdate,
   });
 
   final InteractivePhysicsCubit physicsCubit;
@@ -214,6 +220,7 @@ class _PhysicsARView extends StatefulWidget {
   final void Function(Offset position) onTap;
   final void Function(double offsetX, double offsetY)? onAdjustPosition;
   final void Function(double angle)? onRotationUpdate;
+  final void Function(double scale)? onZoomUpdate;
 
   @override
   State<_PhysicsARView> createState() => _PhysicsARViewState();
@@ -221,6 +228,7 @@ class _PhysicsARView extends StatefulWidget {
 
 class _PhysicsARViewState extends State<_PhysicsARView> {
   bool _arViewCreated = false;
+  double _previousScale = 1.0;
 
   @override
   Widget build(BuildContext context) {
@@ -248,6 +256,10 @@ class _PhysicsARViewState extends State<_PhysicsARView> {
           Positioned.fill(
             child: GestureDetector(
               onTapUp: (details) => widget.onTap(details.localPosition),
+              onScaleStart: (details) {
+                // Başlangıç ölçek faktörünü kaydet
+                _previousScale = 1.0;
+              },
               onScaleUpdate: (details) {
                 if (details.pointerCount == 1) {
                   // Single finger drag for movement
@@ -256,10 +268,24 @@ class _PhysicsARViewState extends State<_PhysicsARView> {
                         details.focalPointDelta.dx, details.focalPointDelta.dy);
                   }
                 } else if (details.pointerCount == 2) {
-                  // Two finger rotation
-                  if (widget.onRotationUpdate != null) {
+                  // İki parmak kullanıldığında
+                  if (details.rotation != 0.0 &&
+                      widget.onRotationUpdate != null) {
+                    // Rotasyon değişimi varsa
                     final angle = details.rotation * 180 / math.pi;
                     widget.onRotationUpdate!(angle);
+                  }
+
+                  // Zoom değişimi
+                  if (details.scale != 1.0 && widget.onZoomUpdate != null) {
+                    // Göreceli ölçek değişimini hesapla
+                    final relativeScale = details.scale / _previousScale;
+                    _previousScale = details.scale;
+
+                    // 0.95-1.05 aralığındaki küçük değişimleri filtrele
+                    if (relativeScale < 0.95 || relativeScale > 1.05) {
+                      widget.onZoomUpdate!(relativeScale);
+                    }
                   }
                 }
               },
@@ -490,6 +516,8 @@ class _ObjectControls extends StatefulWidget {
 class _ObjectControlsState extends State<_ObjectControls> {
   // Track if mesh is visible - default false means mesh is hidden
   bool _isMeshVisible = false;
+  // Current selected object type
+  String _selectedObjectType = 'sphere';
 
   @override
   Widget build(BuildContext context) {
@@ -500,58 +528,142 @@ class _ObjectControlsState extends State<_ObjectControls> {
         color: Colors.black.withOpacity(0.7),
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          const Expanded(
-            child: Text(
-              'Objects are raining automatically!',
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-          const SizedBox(width: 16),
-          // Hide/Show mesh button
-          TextButton.icon(
-            icon: Icon(
-              _isMeshVisible ? Icons.grid_off : Icons.grid_on,
-              color: Colors.white,
-            ),
-            label: Text(
-              _isMeshVisible ? 'Hide Mesh' : 'Show Mesh',
-              style: const TextStyle(color: Colors.white),
-            ),
-            onPressed: () {
-              // Toggle mesh visibility state
-              setState(() {
-                _isMeshVisible = !_isMeshVisible;
-              });
+          // Object type selector
+          _buildObjectSelector(),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Drop objects button
+              TextButton.icon(
+                icon: const Icon(Icons.cloud_download,
+                    color: Colors.white, size: 24),
+                label: Text(
+                  'Rain $_selectedObjectType'.toUpperCase(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                onPressed: () {
+                  widget.physicsCubit.startObjectRain(
+                    type: _selectedObjectType,
+                    count: 30, // Daha fazla obje yağdıralım
+                    height: 2.5, // Biraz daha yüksekten
+                  );
+                },
+                style: TextButton.styleFrom(
+                  backgroundColor: Colors.green.shade700.withOpacity(0.8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Hide/Show mesh button
+              TextButton.icon(
+                icon: Icon(
+                  _isMeshVisible ? Icons.grid_off : Icons.grid_on,
+                  color: Colors.white,
+                ),
+                label: Text(
+                  _isMeshVisible ? 'Hide Mesh' : 'Show Mesh',
+                  style: const TextStyle(color: Colors.white),
+                ),
+                onPressed: () {
+                  // Toggle mesh visibility state
+                  setState(() {
+                    _isMeshVisible = !_isMeshVisible;
+                  });
 
-              // _isMeshVisible=true  → show the mesh (opaque)
-              // _isMeshVisible=false → hide the mesh (invisible but maintains physics)
-              widget.physicsCubit.toggleMeshVisibility(_isMeshVisible);
+                  // _isMeshVisible=true  → show the mesh (opaque)
+                  // _isMeshVisible=false → hide the mesh (invisible but maintains physics)
+                  widget.physicsCubit.toggleMeshVisibility(_isMeshVisible);
 
-              print(
-                  "Mesh visibility toggled: ${_isMeshVisible ? 'VISIBLE' : 'HIDDEN'}");
-            },
-            style: TextButton.styleFrom(
-              backgroundColor: _isMeshVisible
-                  ? Colors.orange.withOpacity(0.6)
-                  : Colors.blue.withOpacity(0.6),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            ),
-          ),
-          const SizedBox(width: 8),
-          TextButton.icon(
-            icon: const Icon(Icons.delete_sweep, color: Colors.white),
-            label:
-                const Text('Clear All', style: TextStyle(color: Colors.white)),
-            onPressed: widget.onClearObjects,
-            style: TextButton.styleFrom(
-              backgroundColor: Colors.red.withOpacity(0.6),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            ),
+                  print(
+                      "Mesh visibility toggled: ${_isMeshVisible ? 'VISIBLE' : 'HIDDEN'}");
+                },
+                style: TextButton.styleFrom(
+                  backgroundColor: _isMeshVisible
+                      ? Colors.orange.withOpacity(0.6)
+                      : Colors.blue.withOpacity(0.6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+              ),
+              const SizedBox(width: 8),
+              TextButton.icon(
+                icon: const Icon(Icons.delete_sweep, color: Colors.white),
+                label: const Text('Clear All',
+                    style: TextStyle(color: Colors.white)),
+                onPressed: widget.onClearObjects,
+                style: TextButton.styleFrom(
+                  backgroundColor: Colors.red.withOpacity(0.6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+              ),
+            ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildObjectSelector() {
+    return Container(
+      height: 90,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          _objectOption('sphere', 'Sphere', Icons.circle),
+          _objectOption('cube', 'Cube', Icons.crop_square_sharp),
+          _objectOption('cylinder', 'Cylinder', Icons.crop_portrait),
+          _objectOption('coin', 'Coin', Icons.monetization_on),
+          _objectOption('usdz', '1 Dollar', Icons.view_in_ar),
+        ],
+      ),
+    );
+  }
+
+  Widget _objectOption(String type, String label, IconData icon) {
+    final isSelected = _selectedObjectType == type;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedObjectType = type;
+        });
+
+        // Send the selection to iOS
+        widget.physicsCubit.setSelectedObjectType(type);
+      },
+      child: Container(
+        width: 80,
+        margin: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.blue : Colors.grey.shade800,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: Colors.white, size: 32),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

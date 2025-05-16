@@ -112,6 +112,28 @@ class InteractivePhysicsCubit extends Cubit<InteractivePhysicsState> {
     }
   }
 
+  /// Zoom in/out on the model - scale factor is relative (1.0 is no change)
+  Future<void> zoomModel(double scaleFactor) async {
+    if (_arViewId < 0 || !state.isSimulationRunning) {
+      print(
+          'Cannot zoom model: ARViewId = $_arViewId, isSimulationRunning = ${state.isSimulationRunning}');
+      return;
+    }
+
+    try {
+      // Update the model zoom in the native code
+      final success = await _physicsService.zoomModel(scaleFactor);
+
+      if (success) {
+        print('Model zoomed by factor: $scaleFactor');
+      } else {
+        print('Failed to zoom model');
+      }
+    } catch (e) {
+      debugPrint('Error zooming model: $e');
+    }
+  }
+
   /// Reset the model alignment to initial position
   Future<void> resetAlignment() async {
     if (!_isARViewValid() || !state.isSimulationRunning) return;
@@ -144,32 +166,32 @@ class InteractivePhysicsCubit extends Cubit<InteractivePhysicsState> {
     print(
         'InteractivePhysicsCubit: Alignment completed. Ready for physics interaction.');
 
+    // Give a moment for the physics to stabilize before hiding mesh
+    await Future.delayed(const Duration(milliseconds: 500));
+
     bool meshHiddenSuccessfully = false;
     try {
+      print(
+          'InteractivePhysicsCubit: Setting mesh to invisible to enable occlusion');
       bool success = await _physicsService.setMeshVisibility(false);
       if (!success) {
         print(
             'InteractivePhysicsCubit: Warning - First attempt to make mesh invisible failed, retrying...');
-        await Future.delayed(const Duration(milliseconds: 300));
+        await Future.delayed(const Duration(milliseconds: 500));
         success = await _physicsService.setMeshVisibility(false);
-        if (!success) {
-          print(
-              'InteractivePhysicsCubit: Warning - Second attempt to make mesh invisible failed, final retry...');
-          await Future.delayed(const Duration(milliseconds: 500));
-          success = await _physicsService.setMeshVisibility(false);
-        }
       }
       meshHiddenSuccessfully = success;
+
       if (!meshHiddenSuccessfully) {
         print(
             'InteractivePhysicsCubit: Error - Failed to make mesh invisible after multiple attempts');
+      } else {
+        print(
+            'InteractivePhysicsCubit: Successfully hidden mesh and enabled real-world occlusion');
       }
     } catch (e) {
       print('InteractivePhysicsCubit: Error setting mesh visibility: $e');
     }
-    print(
-        'InteractivePhysicsCubit: Mesh visibility set to invisible: $meshHiddenSuccessfully');
-    _startObjectRain(); // Start object rain after alignment and attempt to hide mesh
   }
 
   /// Starts the periodic spawning of random objects.
@@ -402,6 +424,45 @@ class InteractivePhysicsCubit extends Cubit<InteractivePhysicsState> {
     }
   }
 
+  /// Set the selected object type in the native code
+  ///
+  /// @param type The type of object to select (sphere, cube, cylinder, usdz)
+  Future<void> setSelectedObjectType(String type) async {
+    if (!_isARViewValid() || !state.isSimulationRunning) return;
+
+    try {
+      await _physicsService.setSelectedObject(type);
+      print('InteractivePhysicsCubit: Selected object type set to: $type');
+    } catch (e) {
+      print('InteractivePhysicsCubit: Error setting object type: $e');
+    }
+  }
+
+  /// Start raining objects of the selected type
+  ///
+  /// @param type The type of object to rain
+  /// @param count The number of objects to rain
+  /// @param height The height above the camera to start raining from
+  Future<void> startObjectRain({
+    required String type,
+    int count = 30,
+    double height = 2.0,
+  }) async {
+    if (!_isARViewValid() || !state.isSimulationRunning) return;
+
+    try {
+      await _physicsService.startObjectRain(
+        type: type,
+        count: count,
+        height: height,
+      );
+      print(
+          'InteractivePhysicsCubit: Started raining $count objects of type: $type');
+    } catch (e) {
+      print('InteractivePhysicsCubit: Error starting object rain: $e');
+    }
+  }
+
   @override
   Future<void> close() {
     _stopObjectRain(); // Stop object rain when Cubit is closed
@@ -426,11 +487,13 @@ class InteractivePhysicsCubit extends Cubit<InteractivePhysicsState> {
   List<double> _getScaleForObjectType(PhysicsObjectType type) {
     switch (type) {
       case PhysicsObjectType.sphere:
-        return [0.05, 0.05, 0.05];
+        return [0.03, 0.03, 0.03];
       case PhysicsObjectType.cube:
-        return [0.05, 0.05, 0.05];
+        return [0.03, 0.03, 0.03];
       case PhysicsObjectType.cylinder:
-        return [0.05, 0.1, 0.05];
+        return [0.03, 0.06, 0.03];
+      case PhysicsObjectType.coin:
+        return [0.05, 0.008, 0.05];
     }
   }
 
@@ -442,6 +505,8 @@ class InteractivePhysicsCubit extends Cubit<InteractivePhysicsState> {
         return 10.0;
       case PhysicsObjectType.cylinder:
         return 7.5;
+      case PhysicsObjectType.coin:
+        return 2.0;
     }
   }
 

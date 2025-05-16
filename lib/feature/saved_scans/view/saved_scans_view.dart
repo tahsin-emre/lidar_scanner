@@ -47,7 +47,7 @@ class _SavedScansViewState extends State<SavedScansView> with SavedScansMixin {
         ),
       );
     }
-    if (objFiles.isEmpty) {
+    if (scanFiles.isEmpty) {
       return const Center(
         child: Text(
           'No saved scans found.\nExport a scan from the Scanner screen.',
@@ -57,19 +57,32 @@ class _SavedScansViewState extends State<SavedScansView> with SavedScansMixin {
     }
 
     return ListView.builder(
-      itemCount: objFiles.length,
+      itemCount: scanFiles.length,
       itemBuilder: (context, index) {
-        final file = objFiles[index];
-        final fileName = file.path.split('/').last; // Get simple filename
+        final scanFile = scanFiles[index];
         return Card(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Column(
             children: [
               ListTile(
                 leading: const Icon(Icons.view_in_ar),
-                title: Text(fileName),
-                subtitle:
-                    Text('Path: ${file.path}'), // Show full path if needed
+                title: Text(scanFile.fileName),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Created: ${scanFile.formattedDate}'),
+                    Text(
+                      scanFile.file.path,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade700,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+                isThreeLine: true,
               ),
               ButtonBar(
                 alignment: MainAxisAlignment.spaceEvenly,
@@ -78,21 +91,23 @@ class _SavedScansViewState extends State<SavedScansView> with SavedScansMixin {
                     icon: Icons.visibility,
                     label: 'View',
                     onPressed: () {
-                      ModelViewerView(modelPath: file.path).push(context);
+                      ModelViewerView(modelPath: scanFile.file.path)
+                          .push(context);
                     },
                   ),
                   _ActionButton(
                     icon: Icons.sports_esports,
                     label: 'Physics Mode',
                     onPressed: () {
-                      InteractivePhysicsView(scanPath: file.path).push(context);
+                      InteractivePhysicsView(scanPath: scanFile.file.path)
+                          .push(context);
                     },
                   ),
                   _ActionButton(
                     icon: Icons.delete_outline,
                     label: 'Delete',
                     color: Colors.redAccent,
-                    onPressed: () => _deleteScan(file),
+                    onPressed: () => _deleteScan(scanFile),
                   ),
                 ],
               ),
@@ -103,14 +118,14 @@ class _SavedScansViewState extends State<SavedScansView> with SavedScansMixin {
     );
   }
 
-  Future<void> _deleteScan(FileSystemEntity file) async {
+  Future<void> _deleteScan(ScanFile scanFile) async {
     try {
       final confirm = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Delete Scan?'),
-          content: Text(
-              'Are you sure you want to delete ${file.path.split('/').last}?'),
+          content:
+              Text('Are you sure you want to delete ${scanFile.fileName}?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
@@ -125,9 +140,9 @@ class _SavedScansViewState extends State<SavedScansView> with SavedScansMixin {
       );
 
       if (confirm == true) {
-        await file.delete();
+        await scanFile.file.delete();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${file.path.split('/').last} deleted.')),
+          SnackBar(content: Text('${scanFile.fileName} deleted.')),
         );
         await loadSavedScans(); // Refresh list after deleting
       }

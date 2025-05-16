@@ -144,6 +144,16 @@ class PhysicsViewFactory: NSObject, FlutterPlatformViewFactory {
             let success = physicsView.rotateModelY(angle: angle)
             result(success)
             
+        case "zoomModel":
+            guard let scaleFactor = args["scaleFactor"] as? Double else {
+                result(FlutterError(code: "INVALID_ARGS", message: "Missing scaleFactor parameter", details: nil))
+                return
+            }
+            
+            print("PhysicsViewFactory: Zooming model with scale factor \(scaleFactor) for view ID \(viewId)")
+            let success = physicsView.zoomModel(scaleFactor: scaleFactor)
+            result(success)
+            
         case "resetModelPositionToOrigin":
             let success = physicsView.resetModelPositionToOrigin()
             result(success)
@@ -168,6 +178,14 @@ class PhysicsViewFactory: NSObject, FlutterPlatformViewFactory {
             
             print("PhysicsViewFactory: Setting mesh visibility to \(visible) for view ID \(viewId)")
             let success = physicsView.setMeshVisibility(visible: visible)
+            
+            // If we're making the mesh invisible, we should make sure we're still using LiDAR for occlusion
+            if !visible && success {
+                // This ensures LiDAR real-world occlusion is still active even with invisible scanned model
+                print("PhysicsViewFactory: Mesh hidden - confirming LiDAR occlusion is active")
+                physicsView.confirmLiDAREnabled()
+            }
+            
             print("PhysicsViewFactory: Mesh visibility update result: \(success)")
             result(success)
             
@@ -175,6 +193,24 @@ class PhysicsViewFactory: NSObject, FlutterPlatformViewFactory {
             let position = physicsView.getCameraPosition()
             print("PhysicsViewFactory: Getting camera position for view ID \(viewId): \(position)")
             result(position)
+            
+        case "setSelectedObject":
+            guard let type = args["type"] as? String else {
+                result(FlutterError(code: "INVALID_ARGS", message: "Missing type parameter", details: nil))
+                return
+            }
+            
+            print("PhysicsViewFactory: Setting selected object type to \(type) for view ID \(viewId)")
+            let success = physicsView.setSelectedObject(type: type)
+            result(success)
+            
+        case "startObjectRain":
+            let count = args["count"] as? Int ?? 20
+            let height = Float(args["height"] as? Double ?? 2.0)
+            
+            print("PhysicsViewFactory: Starting object rain with \(count) objects at height \(height) for view ID \(viewId)")
+            let success = physicsView.startObjectRain(count: count, height: height)
+            result(success)
             
         default:
             result(FlutterMethodNotImplemented)

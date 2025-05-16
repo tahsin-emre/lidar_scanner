@@ -1,11 +1,11 @@
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart' hide Material;
-import 'package:flutter_cube/flutter_cube.dart'; // Use flutter_cube
+import 'package:flutter_cube/flutter_cube.dart';
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart'; // For temp directory
+import 'package:path_provider/path_provider.dart';
 
-// Convert back to StatefulWidget for temp file handling
 class ModelViewerView extends StatefulWidget {
   const ModelViewerView({
     required this.modelPath,
@@ -17,22 +17,44 @@ class ModelViewerView extends StatefulWidget {
   State<ModelViewerView> createState() => _ModelViewerState();
 }
 
-class _ModelViewerState extends State<ModelViewerView> {
-  // Store the future that copies the file and returns the temp path
+class _ModelViewerState extends State<ModelViewerView>
+    with TickerProviderStateMixin {
   late Future<String> _tempModelPathFuture;
-  String? _createdTempPath; // Store the path to delete it later
+  String? _createdTempPath;
+  bool _isRotating = false;
+  final Vector3 _lastPosition = Vector3.zero();
+  DateTime _lastTouchTime = DateTime.now();
+  Object? _modelObject;
+  Scene? _scene;
+  late AnimationController _rotationController;
 
   @override
   void initState() {
     super.initState();
     _tempModelPathFuture = _prepareTempModelPath(widget.modelPath);
+    _rotationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 16),
+    )..addListener(_handleRotationAnimation);
+  }
+
+  void _handleRotationAnimation() {
+    if (_isRotating && _modelObject != null && _scene != null) {
+      final now = DateTime.now();
+      final elapsed = now.difference(_lastTouchTime).inMilliseconds;
+
+      // Only rotate if no touch input recently (1 second)
+      if (elapsed > 1000) {
+        _modelObject!.rotation.y += 0.01;
+        _scene!.update();
+      }
+    }
   }
 
   Future<String> _prepareTempModelPath(String originalPath) async {
     try {
       final tempDir = await getTemporaryDirectory();
       final originalFileName = p.basename(originalPath);
-      // Create a safe filename by replacing spaces
       final safeFileName = originalFileName.replaceAll(' ', '_');
       final tempPath = p.join(tempDir.path, safeFileName);
 
@@ -40,42 +62,70 @@ class _ModelViewerState extends State<ModelViewerView> {
       debugPrint('Temporary path: $tempPath');
 
       final originalFile = File(originalPath);
-      if (!await originalFile.exists()) {
+      if (!originalFile.existsSync()) {
         throw Exception('Original file not found: $originalPath');
       }
 
-      // Copy the file to the temporary path
       final tempFile = await originalFile.copy(tempPath);
-      _createdTempPath = tempFile.path; // Store for deletion
+      _createdTempPath = tempFile.path;
       debugPrint('File copied successfully to temporary path.');
       return tempFile.path;
-    } catch (e) {
-      debugPrint('Error preparing temporary model path: $e');
+    } catch (error) {
+      debugPrint('Error preparing temporary model path: $error');
       rethrow;
     }
   }
 
   @override
   void dispose() {
-    // Delete the temporary file when the widget is disposed
+    _rotationController.dispose();
     if (_createdTempPath != null) {
       try {
         File(_createdTempPath!).deleteSync();
         debugPrint('Temporary file deleted: $_createdTempPath');
-      } catch (e) {
-        debugPrint('Error deleting temporary file: $e');
+      } catch (error) {
+        debugPrint('Error deleting temporary file: $error');
       }
     }
     super.dispose();
+  }
+
+  void _startRotation() {
+    if (!_rotationController.isAnimating) {
+      _rotationController.repeat();
+    }
+  }
+
+  void _stopRotation() {
+    if (_rotationController.isAnimating) {
+      _rotationController.stop();
+    }
+  }
+
+  void _toggleRotation() {
+    setState(() {
+      _isRotating = !_isRotating;
+      if (_isRotating) {
+        _startRotation();
+      } else {
+        _stopRotation();
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Point Cloud Viewer'),
+        title: const Text('3D Model Viewer'),
+        actions: [
+          IconButton(
+            icon: Icon(_isRotating ? Icons.pause : Icons.play_arrow),
+            tooltip: _isRotating ? 'Stop Auto-Rotation' : 'Start Auto-Rotation',
+            onPressed: _toggleRotation,
+          ),
+        ],
       ),
-      // Use FutureBuilder to wait for the temporary file path
       body: FutureBuilder<String>(
         future: _tempModelPathFuture,
         builder: (context, snapshot) {
@@ -93,56 +143,58 @@ class _ModelViewerState extends State<ModelViewerView> {
               ),
             );
           } else if (snapshot.hasData) {
-            // Temporary path is ready, build the Cube widget
             final tempModelPath = snapshot.data!;
-            final object = Object(fileName: tempModelPath, lighting: true);
-
-            return Cube(
-              onSceneCreated: (Scene scene) {
-                scene.world.add(object);
-
-                // Convert mesh to points
-                if (object.mesh != null) {
-                  final vertices = object.mesh!.vertices;
-                  final points = <Object>[];
-
-                  // Create a point for each vertex
-                  for (var i = 0; i < vertices.length; i += 3) {
-                    final point = Object(
-                      mesh: Mesh(
-                        vertices: [
-                          vertices[i],
-                          vertices[i + 1],
-                          vertices[i + 2]
-                        ],
-                        indices: [Polygon(0, 1, 2)],
-                      ),
+            return Stack(
+              children: [
+                Cube(
+                  onSceneCreated: (Scene scene) {
+                    _scene = scene;
+                    _modelObject = Object(
+                      fileName: tempModelPath,
+                      scale: Vector3(1, 1, 1),
+                      lighting: true,
+                      position: Vector3(0, 0, 0),
                     );
-                    final material = Material()
-                      ..diffuse = fromColor(Colors.blue);
-                    point.mesh.material = material;
-                    points.add(point);
-                  }
+                    scene.world.add(_modelObject!);
 
-                  // Remove original object and add points
-                  scene.world.remove(object);
-                  for (final point in points) {
-                    scene.world.add(point);
-                  }
-                }
+                    // Set up camera and lighting
+                    scene.camera.position.setFrom(Vector3(0, 5, 10));
+                    scene.camera.target.setFrom(Vector3(0, 0, 0));
+                    scene.camera.fov = 45;
+                    scene.light.position.setFrom(Vector3(0, 10, 10));
+                    scene.light.setColor(Colors.white, 1, 0.7, 0.5);
 
-                // Adjust camera settings
-                scene.camera.position.setFrom(Vector3(0, 5, 15));
-                scene.camera.target.setFrom(Vector3(0, 0, 0));
-                scene.camera.zoom = 1.0;
-
-                // Add lighting
-                scene.light.position.setFrom(Vector3(10, 20, 10));
-                scene.light.setColor(Colors.white, 0.8, 0.4, 0.2);
-              },
+                    if (_isRotating) {
+                      _startRotation();
+                    }
+                  },
+                  interactive: true, // Enable interaction with the model
+                ),
+                // Help text overlay
+                Positioned(
+                  bottom: 16,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withAlpha(153),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'Pan to rotate • Pinch to zoom',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             );
           } else {
-            // Should not happen
             return const Center(child: Text('Unknown state'));
           }
         },
