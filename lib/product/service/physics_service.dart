@@ -1,39 +1,45 @@
 import 'package:flutter/services.dart';
 import 'package:injectable/injectable.dart';
 import 'package:lidar_scanner/product/model/physics_object.dart';
+import 'package:logging/logging.dart';
 
 /// Service for communicating with the native physics simulation
 @singleton
 class PhysicsService {
   /// Create a new physics service
-  PhysicsService();
+  PhysicsService() {
+    _logger = Logger('PhysicsService');
+  }
 
   static const _channel = MethodChannel('com.example.lidarScanner/physics');
+  late final Logger _logger;
 
   int _viewId = -1;
 
   /// Set the view ID for platform channel communication
   void setViewId(int id) {
-    print('PhysicsService: Setting viewId to $id');
+    _logger.info('Setting viewId to $id');
     _viewId = id;
   }
 
   /// Initialize the physics environment with the scan data
   Future<void> initializePhysics({required String scanPath}) async {
     try {
-      print(
-          'PhysicsService: Initializing physics with scan path: $scanPath, viewId: $_viewId');
+      _logger.info(
+        'Initializing physics with scan path: $scanPath, '
+        'viewId: $_viewId',
+      );
       await _channel.invokeMethod('initializePhysics', {
         'scanPath': scanPath,
         'viewId': _viewId,
       });
-      print('PhysicsService: Physics initialization completed successfully');
+      _logger.info('Physics initialization completed successfully');
     } on PlatformException catch (e) {
-      print('Error initializing physics: ${e.message}');
-      print('Error details: ${e.details}');
+      _logger.severe('Error initializing physics: ${e.message}');
+      _logger.severe('Error details: ${e.details}');
       rethrow;
     } catch (e) {
-      print('Unexpected error initializing physics: $e');
+      _logger.severe('Unexpected error initializing physics: $e');
       rethrow;
     }
   }
@@ -54,7 +60,8 @@ class PhysicsService {
       }
       return null;
     } on PlatformException catch (e) {
-      print('Error converting screen to world position: ${e.message}');
+      _logger
+          .warning('Error converting screen to world position: ${e.message}');
       return null;
     }
   }
@@ -62,14 +69,14 @@ class PhysicsService {
   /// Add a physics object to the simulation
   Future<bool> addPhysicsObject(PhysicsObject object) async {
     try {
-      print('PhysicsService: Adding object: ${object.id}, viewId: $_viewId');
+      _logger.info('Adding object: ${object.id}, viewId: $_viewId');
       final result = await _channel.invokeMethod<bool>('addPhysicsObject', {
         'object': object.toMap(),
         'viewId': _viewId,
       });
       return result ?? false;
     } on PlatformException catch (e) {
-      print('Error adding physics object: ${e.message}');
+      _logger.warning('Error adding physics object: ${e.message}');
       return false;
     }
   }
@@ -83,7 +90,7 @@ class PhysicsService {
       });
       return result ?? false;
     } on PlatformException catch (e) {
-      print('Error removing physics object: ${e.message}');
+      _logger.warning('Error removing physics object: ${e.message}');
       return false;
     }
   }
@@ -91,12 +98,12 @@ class PhysicsService {
   /// Clear all physics objects from the simulation
   Future<void> clearObjects() async {
     try {
-      print('PhysicsService: Clearing all objects, viewId: $_viewId');
+      _logger.info('Clearing all objects, viewId: $_viewId');
       await _channel.invokeMethod('clearPhysicsObjects', {
         'viewId': _viewId,
       });
     } on PlatformException catch (e) {
-      print('Error clearing physics objects: ${e.message}');
+      _logger.warning('Error clearing physics objects: ${e.message}');
       rethrow;
     }
   }
@@ -115,7 +122,7 @@ class PhysicsService {
         'viewId': _viewId,
       });
     } on PlatformException catch (e) {
-      print('Error applying force: ${e.message}');
+      _logger.warning('Error applying force: ${e.message}');
       rethrow;
     }
   }
@@ -123,8 +130,10 @@ class PhysicsService {
   /// Adjust the position of the scanned model in the physics environment
   Future<bool> adjustModelPosition(double deltaX, double deltaY) async {
     try {
-      print(
-          'PhysicsService: Adjusting model position with delta: ($deltaX, $deltaY), viewId: $_viewId');
+      _logger.info(
+        'Adjusting model position with delta: ($deltaX, $deltaY), '
+        'viewId: $_viewId',
+      );
       final result = await _channel.invokeMethod<bool>('adjustModelPosition', {
         'deltaX': deltaX,
         'deltaY': deltaY,
@@ -132,23 +141,24 @@ class PhysicsService {
       });
       return result ?? false;
     } on PlatformException catch (e) {
-      print('Error adjusting model position: ${e.message}');
+      _logger.warning('Error adjusting model position: ${e.message}');
       return false;
     }
   }
 
   /// Set the visibility of the scanned mesh
-  Future<bool> setMeshVisibility(bool visible) async {
+  Future<bool> setMeshVisibility({required bool visible}) async {
     try {
-      print(
-          'PhysicsService: Setting mesh visibility to: $visible, viewId: $_viewId');
+      _logger.info(
+        'Setting mesh visibility to: $visible, viewId: $_viewId',
+      );
       final result = await _channel.invokeMethod<bool>('setMeshVisibility', {
         'visible': visible,
         'viewId': _viewId,
       });
       return result ?? false;
     } on PlatformException catch (e) {
-      print('Error setting mesh visibility: ${e.message}');
+      _logger.warning('Error setting mesh visibility: ${e.message}');
       return false;
     }
   }
@@ -161,7 +171,7 @@ class PhysicsService {
       });
       return result ?? 0.0;
     } on PlatformException catch (e) {
-      print('Error getting FPS: ${e.message}');
+      _logger.warning('Error getting FPS: ${e.message}');
       return 0.0;
     }
   }
@@ -183,7 +193,7 @@ class PhysicsService {
 
       await _channel.invokeMethod('setPhysicsParameters', params);
     } on PlatformException catch (e) {
-      print('Error setting physics parameters: ${e.message}');
+      _logger.warning('Error setting physics parameters: ${e.message}');
       rethrow;
     }
   }
@@ -197,14 +207,14 @@ class PhysicsService {
         });
       }
     } on PlatformException catch (e) {
-      print('Error disposing physics service: ${e.message}');
+      _logger.warning('Error disposing physics service: ${e.message}');
     }
   }
 
   /// Get the current camera position in the AR scene
   Future<List<double>?> getCameraPosition() async {
     try {
-      print('PhysicsService: Getting camera position, viewId: $_viewId');
+      _logger.info('Getting camera position, viewId: $_viewId');
       final result =
           await _channel.invokeMethod<List<dynamic>>('getCameraPosition', {
         'viewId': _viewId,
@@ -215,7 +225,7 @@ class PhysicsService {
       }
       return null;
     } on PlatformException catch (e) {
-      print('Error getting camera position: ${e.message}');
+      _logger.warning('Error getting camera position: ${e.message}');
       return null;
     }
   }
@@ -223,15 +233,14 @@ class PhysicsService {
   /// Reset the model position to its origin in the native physics environment.
   Future<bool> resetModelPositionToOrigin() async {
     try {
-      print(
-          'PhysicsService: Resetting model position to origin, viewId: $_viewId');
+      _logger.info('Resetting model position to origin, viewId: $_viewId');
       final result = await _channel.invokeMethod<bool>(
         'resetModelPositionToOrigin',
-        {'viewId': _viewId}, // Ensure viewId is passed
+        {'viewId': _viewId},
       );
       return result ?? false;
     } on PlatformException catch (e) {
-      print('Error resetting model position to origin: ${e.message}');
+      _logger.warning('Error resetting model position to origin: ${e.message}');
       return false;
     }
   }
@@ -239,15 +248,14 @@ class PhysicsService {
   /// Rotate the model around its Y axis
   Future<bool> rotateModelY(double angle) async {
     try {
-      print(
-          'PhysicsService: Rotating model by angle: $angle, viewId: $_viewId');
+      _logger.info('Rotating model by angle: $angle, viewId: $_viewId');
       final result = await _channel.invokeMethod<bool>('rotateModelY', {
         'angle': angle,
         'viewId': _viewId,
       });
       return result ?? false;
     } on PlatformException catch (e) {
-      print('Error rotating model: ${e.message}');
+      _logger.warning('Error rotating model: ${e.message}');
       return false;
     }
   }
@@ -255,15 +263,14 @@ class PhysicsService {
   /// Zoom in/out on the model - scale factor is relative (1.0 is no change)
   Future<bool> zoomModel(double scaleFactor) async {
     try {
-      print(
-          'PhysicsService: Zooming model by factor: $scaleFactor, viewId: $_viewId');
+      _logger.info('Zooming model by factor: $scaleFactor, viewId: $_viewId');
       final result = await _channel.invokeMethod<bool>('zoomModel', {
         'scaleFactor': scaleFactor,
         'viewId': _viewId,
       });
       return result ?? false;
     } on PlatformException catch (e) {
-      print('Error zooming model: ${e.message}');
+      _logger.warning('Error zooming model: ${e.message}');
       return false;
     }
   }
@@ -271,15 +278,14 @@ class PhysicsService {
   /// Set the selected object type in the physics simulation
   Future<bool> setSelectedObject(String type) async {
     try {
-      print(
-          'PhysicsService: Setting selected object type to: $type, viewId: $_viewId');
+      _logger.info('Setting selected object type to: $type, viewId: $_viewId');
       final result = await _channel.invokeMethod<bool>('setSelectedObject', {
         'type': type,
         'viewId': _viewId,
       });
       return result ?? false;
     } on PlatformException catch (e) {
-      print('Error setting selected object type: ${e.message}');
+      _logger.warning('Error setting selected object type: ${e.message}');
       return false;
     }
   }
@@ -291,8 +297,10 @@ class PhysicsService {
     double height = 2.0,
   }) async {
     try {
-      print(
-          'PhysicsService: Starting object rain with $count objects of type: $type, viewId: $_viewId');
+      _logger.info(
+        'Starting object rain with $count objects of type: $type, '
+        'viewId: $_viewId',
+      );
       final result = await _channel.invokeMethod<bool>('startObjectRain', {
         'type': type,
         'count': count,
@@ -301,7 +309,7 @@ class PhysicsService {
       });
       return result ?? false;
     } on PlatformException catch (e) {
-      print('Error starting object rain: ${e.message}');
+      _logger.warning('Error starting object rain: ${e.message}');
       return false;
     }
   }

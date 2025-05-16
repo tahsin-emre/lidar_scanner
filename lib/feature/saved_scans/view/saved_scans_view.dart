@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:lidar_scanner/feature/interactive_physics/view/interactive_physics_view.dart';
 import 'package:lidar_scanner/feature/model_viewer/view/model_viewer_view.dart';

@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart' hide Material;
 import 'package:flutter_cube/flutter_cube.dart';
@@ -22,8 +21,7 @@ class _ModelViewerState extends State<ModelViewerView>
   late Future<String> _tempModelPathFuture;
   String? _createdTempPath;
   bool _isRotating = false;
-  final Vector3 _lastPosition = Vector3.zero();
-  DateTime _lastTouchTime = DateTime.now();
+  final _lastTouchTime = DateTime.now();
   Object? _modelObject;
   Scene? _scene;
   late AnimationController _rotationController;
@@ -83,7 +81,7 @@ class _ModelViewerState extends State<ModelViewerView>
       try {
         File(_createdTempPath!).deleteSync();
         debugPrint('Temporary file deleted: $_createdTempPath');
-      } catch (error) {
+      } on IOException catch (error) {
         debugPrint('Error deleting temporary file: $error');
       }
     }
@@ -151,14 +149,13 @@ class _ModelViewerState extends State<ModelViewerView>
                     _scene = scene;
                     _modelObject = Object(
                       fileName: tempModelPath,
-                      scale: Vector3(1, 1, 1),
+                      scale: Vector3(1.5, 1.5, 1.5),
                       lighting: true,
-                      position: Vector3(0, 0, 0),
                     );
                     scene.world.add(_modelObject!);
 
                     // Set up camera and lighting
-                    scene.camera.position.setFrom(Vector3(0, 5, 10));
+                    scene.camera.position.setFrom(Vector3(0, 3, 6));
                     scene.camera.target.setFrom(Vector3(0, 0, 0));
                     scene.camera.fov = 45;
                     scene.light.position.setFrom(Vector3(0, 10, 10));
@@ -168,7 +165,7 @@ class _ModelViewerState extends State<ModelViewerView>
                       _startRotation();
                     }
                   },
-                  interactive: true, // Enable interaction with the model
+                  interactive: true,
                 ),
                 // Help text overlay
                 Positioned(

@@ -77,17 +77,15 @@ class _ScannerViewState extends State<ScannerView> with ScannerMixin {
       child: BlocBuilder<ScannerCubit, ScannerState>(
         bloc: scannerCubit,
         builder: (context, state) {
-          final bool scanningComplete =
+          final scanningComplete =
               state.canScan && !state.isScanning && state.scanProgress > 0;
 
           return Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Only show these buttons if scanning is complete (has scan data)
               if (scanningComplete) ...[
-                // Physics mode button
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 16.0),
+                  padding: const EdgeInsets.only(bottom: 16),
                   child: ElevatedButton.icon(
                     icon: const Icon(Icons.sports_esports),
                     label: const Text('Enter Physics Mode'),
@@ -104,48 +102,14 @@ class _ScannerViewState extends State<ScannerView> with ScannerMixin {
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  // Only show export button if scanning is complete
                   if (scanningComplete) ...[
                     FloatingActionButton(
                       heroTag: 'export_fab',
-                      onPressed: () async {
-                        // Show dialog to get filename
-                        final fileName = await _showFileNameDialog(context);
-                        if (fileName == null || fileName.isEmpty) {
-                          return; // User cancelled or entered empty name
-                        }
-
-                        try {
-                          final result = await scannerCubit.exportModel(
-                            format: ExportFormat.obj,
-                            fileName: fileName,
-                          );
-
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(result.isSuccess
-                                    ? 'Exported to: ${result.filePath}'
-                                    : 'Export failed'),
-                              ),
-                            );
-                          }
-                        } catch (e) {
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Export failed: $e'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                          }
-                        }
-                      },
+                      onPressed: () => _exportModel(context),
                       child: const Icon(Icons.save_alt),
                     ),
                     const SizedBox(width: 16),
                   ],
-                  // Always show the scan button
                   FloatingActionButton(
                     heroTag: 'scan_fab',
                     onPressed: () => _toggleScanning(state),
@@ -165,10 +129,44 @@ class _ScannerViewState extends State<ScannerView> with ScannerMixin {
   Future<void> _toggleScanning(ScannerState state) async {
     if (!state.canScan) return;
     if (state.isScanning) {
-      scannerCubit.stopScanning();
+      await scannerCubit.stopScanning();
     } else {
-      scannerCubit.startScanning(
+      await scannerCubit.startScanning(
         scanQuality: scanQuality,
+      );
+    }
+  }
+
+  Future<void> _exportModel(BuildContext context) async {
+    final fileName = await _showFileNameDialog(context);
+    if (!mounted || fileName == null || fileName.isEmpty) {
+      return;
+    }
+
+    try {
+      final result = await scannerCubit.exportModel(
+        format: ExportFormat.obj,
+        fileName: fileName,
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result.isSuccess
+                ? 'Exported to: ${result.filePath}'
+                : 'Export failed',
+          ),
+        ),
+      );
+    } on Exception catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Export failed: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -176,7 +174,7 @@ class _ScannerViewState extends State<ScannerView> with ScannerMixin {
   Future<void> _enterPhysicsMode(BuildContext context) async {
     try {
       // Show loading indicator
-      showDialog(
+      showDialog<void>(
         context: context,
         barrierDismissible: false,
         builder: (context) => const AlertDialog(
@@ -203,6 +201,7 @@ class _ScannerViewState extends State<ScannerView> with ScannerMixin {
         // Navigate to physics mode with the temporary scan
         InteractivePhysicsView(scanPath: scanPath).push(context);
       } else {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Failed to prepare physics environment'),
@@ -210,7 +209,7 @@ class _ScannerViewState extends State<ScannerView> with ScannerMixin {
           ),
         );
       }
-    } catch (e) {
+    } on Exception catch (e) {
       if (!mounted) return;
 
       // Close loading dialog if still open
@@ -243,7 +242,7 @@ class _ScannerViewState extends State<ScannerView> with ScannerMixin {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(), // Cancel
+              onPressed: () => Navigator.of(context).pop(),
               child: const Text('Cancel'),
             ),
             TextButton(
@@ -252,9 +251,10 @@ class _ScannerViewState extends State<ScannerView> with ScannerMixin {
                 if (name.isNotEmpty) {
                   Navigator.of(context).pop(name);
                 } else {
-                  // Optional: Show error if name is empty
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('File name cannot be empty')),
+                    const SnackBar(
+                      content: Text('File name cannot be empty'),
+                    ),
                   );
                 }
               },
@@ -272,48 +272,22 @@ final class _Body extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return UiKitView(
+    return const UiKitView(
       viewType: 'com.example.lidarScanner',
       onPlatformViewCreated: _onPlatformViewCreated,
-      creationParams: const {
+      creationParams: {
         'initialConfiguration': {
           'enableTapGesture': true,
           'enablePinchGesture': true,
           'enableRotationGesture': true,
-        }
+        },
       },
-      creationParamsCodec: const StandardMessageCodec(),
+      creationParamsCodec: StandardMessageCodec(),
     );
   }
 
   static void _onPlatformViewCreated(int id) {
-    // Platform view created callback
     debugPrint('Platform view created with id: $id');
-  }
-}
-
-class _ScanningOverlay extends StatelessWidget {
-  const _ScanningOverlay({required this.progress});
-
-  final double progress;
-
-  @override
-  Widget build(BuildContext context) {
-    return Positioned(
-      top: 16,
-      left: 16,
-      right: 16,
-      child: Column(
-        children: [
-          LinearProgressIndicator(value: progress),
-          const SizedBox(height: 8),
-          Text(
-            'Scanning Progress: ${(progress * 100).toStringAsFixed(1)}%',
-            style: Theme.of(context).textTheme.bodyLarge,
-          ),
-        ],
-      ),
-    );
   }
 }
 
@@ -339,7 +313,7 @@ class MissingAreasPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.red.withOpacity(0.3)
+      ..color = Colors.red.withValues(red: 255, green: 0, blue: 0, alpha: 77)
       ..style = PaintingStyle.fill;
 
     for (final area in areas) {

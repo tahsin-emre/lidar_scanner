@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lidar_scanner/feature/home/mixin/home_mixin.dart';
-import 'package:lidar_scanner/feature/interactive_physics/view/interactive_physics_view.dart';
 import 'package:lidar_scanner/feature/saved_scans/view/saved_scans_view.dart';
-import 'package:lidar_scanner/feature/saved_scans/mixin/saved_scans_mixin.dart';
 import 'package:lidar_scanner/product/utils/extensions/widget_ext.dart';
 
 part '../widgets/home_header.dart';
@@ -21,69 +19,25 @@ class _HomeViewState extends State<HomeView> with HomeMixin {
       body: CustomScrollView(
         slivers: [
           const SliverAppBar(
-            title: Text('Lidar Scanner'),
+            title: Text('3D Scanner'),
             elevation: 0,
           ),
           _Header(hasLidar: hasLidar, deviceInfo: deviceInfo).sliver(),
 
-          // Ana tarama butonu
+          // Main scan button
           _StartScanButton(
-            icon: Icons.bedroom_parent,
-            label: 'Scan Room',
+            icon: Icons.view_in_ar_rounded,
+            label: 'Start New Scan',
             onTap: pushToScanner,
           ).sliver(),
 
-          const SizedBox(height: 16).sliver(),
+          const SizedBox(height: 24).sliver(),
 
-          // Bilgilendirme başlığı
-          const SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Text(
-                'Interactive Features',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-
-          // Yeni özellikler hakkında kısa açıklama
-          const SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.0),
-              child: Text(
-                'You can view your saved scans and use the interactive physics mode to play with virtual objects in your scanned environment.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey,
-                ),
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 16).sliver(),
-
-          // Kayıtlı taramaları görüntüleme butonu
+          // View saved scans button
           _FeatureButton(
             icon: Icons.folder_open,
-            label: 'View Saved Scans',
+            label: 'View Scan Library',
             onTap: () {
-              const SavedScansView().push(context);
-            },
-          ).sliver(),
-
-          const SizedBox(height: 8).sliver(),
-
-          // Interactive Physics demo butonu
-          _FeatureButton(
-            icon: Icons.sports_esports,
-            label: 'Interactive Physics Demo',
-            onTap: () {
-              // Doğrudan SavedScansView'a yönlendir, orada interaktif fizik modu seçilebilir
               const SavedScansView().push(context);
             },
           ).sliver(),
@@ -107,20 +61,32 @@ final class _StartScanButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        child: InkWell(
-          onTap: onTap,
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 icon,
-                size: 40,
-                color: const Color(0xff29fcfe),
+                size: 48,
+                color: Colors.white,
               ),
-              const SizedBox(height: 8),
-              Text(label),
+              const SizedBox(height: 12),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ],
           ),
         ),
@@ -129,7 +95,6 @@ final class _StartScanButton extends StatelessWidget {
   }
 }
 
-// Yeni özellik butonu
 final class _FeatureButton extends StatelessWidget {
   const _FeatureButton({
     required this.icon,
@@ -143,18 +108,31 @@ final class _FeatureButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ElevatedButton(
-      onPressed: onTap,
-      style: ElevatedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon),
-          const SizedBox(width: 8),
-          Text(label),
-        ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: ElevatedButton(
+        onPressed: onTap,
+        style: ElevatedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+          elevation: 1,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon),
+            const SizedBox(width: 12),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
