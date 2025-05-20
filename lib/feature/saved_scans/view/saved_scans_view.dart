@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:lidar_scanner/feature/interactive_physics/view/interactive_physics_view.dart';
 import 'package:lidar_scanner/feature/model_viewer/view/model_viewer_view.dart';
 import 'package:lidar_scanner/feature/saved_scans/mixin/saved_scans_mixin.dart';
 import 'package:lidar_scanner/product/utils/extensions/widget_ext.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:cross_file/cross_file.dart';
 
 class SavedScansView extends StatefulWidget {
   const SavedScansView({super.key});
@@ -23,7 +21,6 @@ class _SavedScansViewState extends State<SavedScansView> with SavedScansMixin {
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: loadSavedScans,
-            tooltip: 'Refresh',
           ),
         ],
       ),
@@ -107,14 +104,6 @@ class _SavedScansViewState extends State<SavedScansView> with SavedScansMixin {
                     },
                   ),
                   _ActionButton(
-                    icon: Icons.sports_esports,
-                    label: 'Physics Mode',
-                    onPressed: () {
-                      InteractivePhysicsView(scanPath: scanFile.file.path)
-                          .push(context);
-                    },
-                  ),
-                  _ActionButton(
                     icon: Icons.delete_outline,
                     label: 'Delete',
                     color: Colors.redAccent,
@@ -130,41 +119,35 @@ class _SavedScansViewState extends State<SavedScansView> with SavedScansMixin {
   }
 
   Future<void> _deleteScan(ScanFile scanFile) async {
-    try {
-      final confirm = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Delete Scan?'),
-          content:
-              Text('Are you sure you want to delete ${scanFile.fileName}?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Delete', style: TextStyle(color: Colors.red)),
-            ),
-          ],
-        ),
-      );
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Scan?'),
+        content: Text('Are you sure you want to delete ${scanFile.fileName}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
 
-      if (confirm == true) {
-        await scanFile.file.delete();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${scanFile.fileName} deleted.')),
-        );
-        await loadSavedScans(); // Refresh list after deleting
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to delete file: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+    if (confirm != null && confirm == true) {
+      await scanFile.file.delete();
+      showSnackBar('${scanFile.fileName} deleted.');
+      await loadSavedScans();
     }
+  }
+
+  void showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 }
 

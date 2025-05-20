@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lidar_scanner/feature/ar_physics/view/ar_physics_view.dart';
 import 'package:lidar_scanner/feature/home/view/home_view.dart';
 import 'package:lidar_scanner/feature/scanner/view/scanner_view.dart';
 import 'package:lidar_scanner/product/utils/extensions/widget_ext.dart';
@@ -53,5 +54,13 @@ mixin HomeMixin on State<HomeView> {
       return;
     }
     const ScannerView().push(context);
+  }
+
+  void pushToARPhysics() {
+    ARPhysicsView(
+      onClose: () {
+        Navigator.pop(context);
+      },
+    ).push(context);
   }
 }

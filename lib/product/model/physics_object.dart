@@ -1,35 +1,27 @@
+// ignore_for_file: deprecated_member_use, document_ignores
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 
-/// Types of physics objects that can be placed in the simulation
 enum PhysicsObjectType {
-  /// Spherical object (ball)
   sphere,
-
-  /// Cube object
   cube,
-
-  /// Cylinder object
   cylinder,
-
-  /// Coin object (madeni para)
   coin;
 
-  /// Get an icon for this object type
   IconData get icon {
     switch (this) {
       case PhysicsObjectType.sphere:
-        return Icons.circle;
+        return Icons.circle_outlined;
       case PhysicsObjectType.cube:
-        return Icons.crop_square;
+        return Icons.crop_square_outlined;
       case PhysicsObjectType.cylinder:
-        return Icons.toll;
+        return Icons.toll_outlined;
       case PhysicsObjectType.coin:
-        return Icons.monetization_on;
+        return Icons.monetization_on_outlined;
     }
   }
 
-  /// Get a name for this object type
   String get displayName {
     switch (this) {
       case PhysicsObjectType.sphere:
@@ -44,9 +36,7 @@ enum PhysicsObjectType {
   }
 }
 
-/// Represents a physics object in the simulation
 class PhysicsObject extends Equatable {
-  /// Create a new physics object
   const PhysicsObject({
     required this.id,
     required this.type,
@@ -60,37 +50,17 @@ class PhysicsObject extends Equatable {
     this.isStatic = false,
   });
 
-  /// Unique identifier for this object
   final String id;
-
-  /// Type of physics object
   final PhysicsObjectType type;
-
-  /// Position in 3D space (x, y, z)
   final List<double> position;
-
-  /// Rotation in 3D space (x, y, z, w quaternion)
   final List<double> rotation;
-
-  /// Scale in 3D space (x, y, z)
   final List<double> scale;
-
-  /// Linear velocity (x, y, z)
   final List<double> velocity;
-
-  /// Angular velocity (x, y, z)
   final List<double> angularVelocity;
-
-  /// Mass of the object
   final double mass;
-
-  /// Color of the object
   final Color color;
-
-  /// Whether the object is static (immovable)
   final bool isStatic;
 
-  /// Create a copy with updated properties
   PhysicsObject copyWith({
     String? id,
     PhysicsObjectType? type,
@@ -117,7 +87,6 @@ class PhysicsObject extends Equatable {
     );
   }
 
-  /// Convert to a map for sending to native code
   Map<String, dynamic> toMap() {
     return {
       'id': id,

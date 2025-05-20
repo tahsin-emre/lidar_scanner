@@ -1,9 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:lidar_scanner/product/model/physics_object.dart';
 
-/// AR Fizik modülü durumu
 class ARPhysicsState extends Equatable {
-  /// Yeni bir AR Fizik durumu oluştur
   const ARPhysicsState({
     this.isInitialized = false,
     this.objects = const [],
@@ -12,22 +10,12 @@ class ARPhysicsState extends Equatable {
     this.fps = 0,
   });
 
-  /// AR görünümünün başlatılıp başlatılmadığı
   final bool isInitialized;
-
-  /// AR görünümünde bulunan fizik objeleri
   final List<PhysicsObject> objects;
-
-  /// Şu anda seçili olan obje tipi
   final PhysicsObjectType selectedObjectType;
-
-  /// Hata mesajı (varsa)
   final String error;
-
-  /// Mevcut FPS değeri
   final double fps;
 
-  /// Yeni bir durum oluştur
   ARPhysicsState copyWith({
     bool? isInitialized,
     List<PhysicsObject>? objects,
