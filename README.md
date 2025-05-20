@@ -1,16 +1,545 @@
-# lidar_scanner
+# LiDAR Scanner App
 
-A new Flutter project.
+## Folder Architecture
 
-## Getting Started
+The LiDAR Scanner app follows a feature-first architecture with a clean separation of concerns. The codebase is organized as follows:
 
-This project is a starting point for a Flutter application.
+### Main Structure
 
-A few resources to get you started if this is your first Flutter project:
+```
+lib/
+├── feature/           # Feature modules (feature-first architecture)
+│   ├── home/          # Home screen functionality
+│   ├── scanner/       # LiDAR scanning functionality
+│   ├── model_viewer/  # 3D model viewing functionality
+│   ├── ar_physics/    # AR physics simulation
+│   └── saved_scans/   # Saved scans management
+│
+├── product/           # Shared code across features
+│   ├── model/         # Data models
+│   ├── service/       # Services for external APIs
+│   ├── di/            # Dependency injection
+│   └── utils/         # Utility functions and helpers
+│
+└── main.dart          # Application entry point
+```
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+### Feature Module Structure
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Each feature is organized using the BLoC/Cubit pattern:
+
+```
+feature/scanner/
+├── view/              # UI components
+│   └── scanner_view.dart
+├── cubit/             # State management
+└── mixin/             # Shared functionality
+```
+
+### Architecture Highlights
+
+- **Feature-First Organization**: Each functional module is isolated in its own directory
+- **BLoC/Cubit Pattern**: State management using flutter_bloc
+- **Dependency Injection**: Using get_it and injectable for service locator pattern
+- **Clean Separation**: UI (view), business logic (cubit), and data (model) layers are separated
+
+### Key Technologies
+
+- State Management: flutter_bloc
+- Dependency Injection: get_it, injectable
+- 3D Rendering: flutter_cube, model_viewer_plus
+- File Management: path_provider
+- Permissions: permission_handler
+
+## Feature: Home Module
+
+The Home module serves as the main entry point and dashboard of the application, providing access to all the main features.
+
+### Structure
+
+```
+feature/home/
+├── view/              # Main UI components
+│   └── home_view.dart # Primary screen with navigation buttons
+├── widgets/           # Reusable UI components
+│   └── home_header.dart # Header component showing app branding and device status
+└── mixin/             # Shared logic
+    └── home_mixin.dart # Contains device capability checks and navigation logic
+```
+
+### Functionality
+
+- **Device Capability Detection**: Checks if the device has LiDAR capabilities
+- **Permission Handling**: Requests and manages camera permissions
+- **Navigation Hub**: Provides access to:
+  - Starting a new 3D scan
+  - Viewing saved scans library
+  - AR physics simulation mode
+
+### Implementation Details
+
+- Uses a mixin pattern (`HomeMixin`) to separate UI and business logic
+- Implements device capability checks to enable/disable scanning features based on LiDAR availability
+- Provides responsive UI with cards and buttons for main feature navigation
+- Visual feedback to users about device compatibility status
+
+## Feature: Scanner Module
+
+The Scanner module is the core functionality of the application, enabling users to create 3D scans of their environment using LiDAR technology.
+
+### Structure
+
+```
+feature/scanner/
+├── view/              # UI components
+│   └── scanner_view.dart # Main scanning interface
+├── cubit/             # State management
+│   ├── scanner_cubit.dart # Scanner business logic
+│   └── scanner_state.dart # Scanner state definitions
+└── mixin/             # Shared functionality
+    └── scanner_mixin.dart # Scanner UI logic
+```
+
+### Flutter Implementation
+
+The Scanner module is implemented using a combination of Flutter and native iOS code:
+
+#### Scanner View (Flutter)
+
+The main scanner interface is implemented in `scanner_view.dart`, providing:
+- Camera preview with AR overlay
+- Scan quality toggle
+- Start/stop scanning controls
+- Export model functionality
+
+#### Scanner State Management (Flutter)
+
+The scanner uses BLoC/Cubit pattern for state management:
+- `scanner_state.dart`: Defines the state model including scan status, progress, and missing areas
+- `scanner_cubit.dart`: Manages scanner operations and communicates with native code
+- `scanner_mixin.dart`: Handles UI logic and interactions
+
+### Native iOS Implementation
+
+The Scanner module utilizes ARKit and SceneKit for the actual scanning functionality through native Swift code:
+
+#### Core Scanner Components
+
+1. **ScannerView.swift**: The main class responsible for:
+   - Initializing and managing ARKit sessions
+   - Handling LiDAR scanning
+   - Managing scan quality settings
+   - Processing mesh data
+   - Exporting 3D models
+
+2. **ScannerViewFactory.swift**: Creates and registers the native view with Flutter
+
+3. **ModelExporter.swift**: Handles exporting scanned models to:
+   - OBJ format
+   - Manages file operations
+   - Handles temporary files for physics simulations
+
+4. **MeshProcessor.swift**: Processes the scanned mesh data:
+   - Applies quality settings
+   - Enhances visualization
+   - Creates and updates SceneKit nodes
+
+5. **ScannerConfiguration.swift**: Configures scanning parameters:
+   - Sets up default AR configurations
+   - Adjusts settings based on scan quality
+   - Configures lighting and environment settings
+
+### Key Native Code Snippets
+
+**ScannerView.swift (Core scanning functionality)**:
+```swift
+func startScanning(scanQuality: String, scanType: String, configuration: [String: Any]) {
+    guard ARWorldTrackingConfiguration.isSupported else {
+        print("ARWorldTracking is not supported on this device.")
+        return
+    }
+    
+    guard ARWorldTrackingConfiguration.supportsSceneReconstruction(.mesh) else {
+        print("Scene reconstruction is not supported on this device.")
+        return
+    }
+    
+    self.currentscanQuality = scanQuality
+    self.scanConfiguration = configuration
+    
+    // Configure Scanning
+    scannerConfiguration.configureScanning(for: self)
+    
+    print("Native iOS: Starting AR session with quality: \(scanQuality)")
+    isScanning = true
+    session.run(self.configuration, options: [.resetTracking, .removeExistingAnchors])
+}
+```
+
+**ModelExporter.swift (3D model export)**:
+```swift
+func exportModel(meshAnchors: [ARMeshAnchor], format: String, fileName: String, quality: String, isTemporary: Bool = false) -> String {
+    // ... implementation details ...
+    
+    var objContent = "# Point Cloud exported from LiDAR Scanner App\n"
+    var vertexOffset: Int = 0
+    var normalOffset: Int = 0
+
+    // Check if we should export in high quality mode
+    let isHighQuality = quality == "highQuality"
+    
+    // Process each mesh anchor
+    for anchor in meshAnchors {
+        let geometry = anchor.geometry
+        let vertices = geometry.vertices
+
+        // Add vertices as points
+        for i in 0..<vertices.count {
+            let vertex = geometry.vertex(at: UInt32(i))
+            // Apply the anchor's transform to get world coordinates
+            let worldVertex = anchor.transform * simd_float4(vertex, 1)
+            objContent += "v \(worldVertex.x) \(worldVertex.y) \(worldVertex.z)\n"
+        }
+
+        // ... process normals and faces ...
+    }
+
+    return writeObjFile(content: objContent, fileName: fileName, isTemporary: isTemporary)
+}
+```
+
+### Integration Points
+
+The Flutter and Swift code integrate through:
+1. **Method Channels**: For commands like startScanning, stopScanning, exportModel
+2. **Platform Views**: To embed the native ARKit view in the Flutter UI
+3. **State Synchronization**: To update UI based on scan progress
+
+### Features
+
+- **Quality Settings**: Support for high and low quality scans
+- **Real-time Feedback**: Visual indicators for missing areas
+- **Export Formats**: OBJ format support for 3D models
+- **File Management**: Save scans to device storage
+- **Device Compatibility**: Checks for LiDAR capability
+
+## Feature: AR Physics Module
+
+The AR Physics module provides an interactive augmented reality environment where users can place and manipulate virtual objects with realistic physics behavior. This module demonstrates the integration of ARKit physics capabilities with Flutter UI.
+
+### Structure
+
+```
+feature/ar_physics/
+├── view/                     # UI components
+│   └── ar_physics_view.dart  # Main AR physics interface
+├── cubit/                    # State management
+│   ├── ar_physics_cubit.dart # AR physics business logic
+│   └── ar_physics_state.dart # AR physics state definitions
+├── mixin/                    # Shared functionality
+│   └── ar_physics_mixin.dart # AR physics UI logic
+└── widgets/                  # Reusable UI components
+    └── ar_objects_toolbar.dart # Toolbar for selecting different 3D objects
+```
+
+### Flutter Implementation
+
+The AR Physics module uses a combination of Flutter for UI and Swift for the core AR functionality:
+
+#### AR Physics View (Flutter)
+
+The main AR interface in `ar_physics_view.dart` provides:
+- Full-screen AR view
+- Toolbar for selecting different object types (sphere, cube, cylinder, coin)
+- Tap gesture handling for object placement
+- Object counter and clear all button
+
+#### State Management (Flutter)
+
+The AR Physics uses the BLoC/Cubit pattern:
+- `ar_physics_state.dart`: Tracks object list, selected object type, and FPS
+- `ar_physics_cubit.dart`: Manages object placement, selection, and communication with the native code
+- `ar_physics_mixin.dart`: Initializes and disposes resources
+
+#### Object Model
+
+The `physics_object.dart` model defines:
+- Different object types (sphere, cube, cylinder, coin)
+- Physics properties (position, rotation, velocity, mass)
+- UI representation (icons, display names)
+
+### Native iOS Implementation
+
+The AR Physics module uses ARKit and SceneKit for advanced physics simulation:
+
+#### Core Components
+
+1. **ARPhysicsView.swift**: The main class responsible for:
+   - Setting up the AR scene with physics
+   - Managing object placement and collision
+   - Handling real-world surface detection
+   - Configuring occlusion for realistic object interaction
+
+2. **ARPhysicsObjectManager.swift**: Manages all physics objects:
+   - Creates different types of 3D objects (sphere, cube, cylinder, coin)
+   - Configures physics properties (mass, friction, restitution)
+   - Handles object placement and removal
+
+3. **ARCollisionManager.swift**: Handles collision detection:
+   - Creates collision surfaces from detected planes and meshes
+   - Configures surface properties based on type (floor vs. wall)
+   - Manages occlusion for realistic visual integration
+
+4. **ARSessionManager.swift**: Manages the AR session:
+   - Configures AR session with optimal settings
+   - Handles coordinate conversion (screen to world space)
+   - Provides position detection for object placement
+
+5. **ARMethodChannelHandler.swift**: Manages communication with Flutter:
+   - Registers method channels for each view instance
+   - Handles method calls from Flutter to native code
+   - Returns results back to Flutter
+
+### Key Native Code Snippets
+
+**ARPhysicsView.swift (Main view implementation)**:
+```swift
+init(
+    frame: CGRect,
+    viewIdentifier viewId: Int64,
+    arguments args: Any?,
+    binaryMessenger messenger: FlutterBinaryMessenger?
+) {
+    super.init()
+
+    arView = ARSCNView(frame: frame)
+    arView.delegate = self
+    arView.session = session
+    arView.autoenablesDefaultLighting = true
+    arView.automaticallyUpdatesLighting = true
+    arView.debugOptions = []
+    
+    // Depth testing and occlusion settings
+    arView.scene.rootNode.renderingOrder = -1 // Render first
+    
+    // Set physics simulation gravity
+    arView.scene.physicsWorld.gravity = SCNVector3(0, -9.8, 0)
+    
+    // Create manager classes
+    objectManager = ARPhysicsObjectManager(arView: arView)
+    collisionManager = ARCollisionManager(arView: arView)
+    sessionManager = ARSessionManager(arView: arView, session: session)
+    methodChannelHandler = ARMethodChannelHandler(arPhysicsView: self)
+    
+    // Start AR session
+    sessionManager.startARSession()
+}
+```
+
+**ARPhysicsObjectManager.swift (Object creation)**:
+```swift
+private func createObject(ofType type: String, withColor colorArray: [Int]) -> SCNNode? {
+    var geometry: SCNGeometry
+    var node: SCNNode
+    
+    switch type {
+    case "sphere":
+        geometry = SCNSphere(radius: 0.05)
+        node = SCNNode(geometry: geometry)
+        
+        // Create custom material
+        let material = SCNMaterial()
+        material.diffuse.contents = UIColor(
+            red: CGFloat(colorArray[0]) / 255.0,
+            green: CGFloat(colorArray[1]) / 255.0,
+            blue: CGFloat(colorArray[2]) / 255.0,
+            alpha: colorArray.count > 3 ? CGFloat(colorArray[3]) / 255.0 : 1.0
+        )
+        
+        // Set physics properties
+        node.physicsBody = SCNPhysicsBody(
+            type: .dynamic,
+            shape: SCNPhysicsShape(
+                geometry: geometry,
+                options: [SCNPhysicsShape.Option.collisionMargin: 0.005]
+            )
+        )
+        
+        node.physicsBody?.mass = 1.0
+        node.physicsBody?.restitution = 0.7
+        node.physicsBody?.friction = 0.5
+        
+        // ... additional configuration ...
+    }
+    
+    // ... other object types ...
+    
+    return node
+}
+```
+
+**ARCollisionManager.swift (Surface detection)**:
+```swift
+func addCollisionPlane(for planeAnchor: ARPlaneAnchor, to node: SCNNode) {
+    // Create a plane geometry with the detected plane dimensions
+    let plane = SCNPlane(width: CGFloat(planeAnchor.extent.x), 
+                        height: CGFloat(planeAnchor.extent.z))
+    
+    // Create a collision plane node
+    let collisionNode = SCNNode(geometry: plane)
+    
+    // Position the plane correctly
+    collisionNode.position = SCNVector3(planeAnchor.center.x, 0, planeAnchor.center.z)
+    
+    // Orient the plane horizontally (X rotation -90 degrees)
+    collisionNode.eulerAngles.x = -.pi / 2
+    
+    // Add physics body
+    collisionNode.physicsBody = SCNPhysicsBody(
+        type: .static, 
+        shape: SCNPhysicsShape(geometry: plane, options: nil)
+    )
+    
+    // Set collision category
+    collisionNode.physicsBody?.categoryBitMask = 1 // Plane category
+    collisionNode.physicsBody?.collisionBitMask = 2 // Can collide with AR objects
+    
+    // Add the collision node to the plane node
+    node.addChildNode(collisionNode)
+}
+```
+
+### Integration Points
+
+The AR Physics module integrates Flutter and Swift through:
+
+1. **Platform Views**: The native ARKit view is embedded in the Flutter UI
+2. **Method Channels**: For two-way communication:
+   - Flutter → Swift: Object placement, selection, clearing
+   - Swift → Flutter: Position data, physics updates, FPS reporting
+3. **Gesture Handling**: Touch gestures in Flutter are passed to the native layer
+4. **State Synchronization**: The Cubit pattern maintains consistent state between layers
+
+### Features
+
+- **Multiple Object Types**: Sphere, cube, cylinder, and coin with unique physics properties
+- **Realistic Physics**: Gravity, collision, bounce, and friction effects
+- **Real-world Interaction**: Objects collide with detected surfaces and each other
+- **Surface Detection**: Automatic detection of horizontal and vertical surfaces
+- **Occlusion**: Objects can be partially or fully occluded by real-world objects
+- **Performance Monitoring**: FPS tracking to ensure smooth experience
+
+## Feature: Saved Scans Module
+
+The Saved Scans module provides functionality to manage and interact with previously created 3D scans. It allows users to browse, view, share, and delete their saved 3D models.
+
+### Structure
+
+```
+feature/saved_scans/
+├── view/                      # UI components
+│   └── saved_scans_view.dart  # Main scan library interface
+└── mixin/                     # Shared functionality
+    └── saved_scans_mixin.dart # File system operations and scan management
+```
+
+### Functionality
+
+The Saved Scans module is responsible for:
+
+- **Scan Library Management**: Listing and organizing all saved 3D scans
+- **File Operations**: Reading from and writing to the device's document directory
+- **Scan Metadata**: Displaying information like filename, creation date, and file path
+- **Scan Actions**:
+  - Viewing 3D models in the ModelViewer
+  - Sharing scans with other applications
+  - Deleting unwanted scans
+
+### Implementation Details
+
+#### SavedScansView (UI)
+
+The main interface in `saved_scans_view.dart` provides:
+- A list of all saved scans with metadata (filename, creation date, file path)
+- Loading and error states for file operations
+- Action buttons for each scan (view, share, delete)
+- Confirmation dialogs for destructive actions
+- Empty state handling when no scans are available
+
+#### SavedScansMixin (Logic)
+
+The mixin in `saved_scans_mixin.dart` handles:
+- File system access through `path_provider`
+- Scan file discovery and filtering (.obj files)
+- File metadata extraction (creation date, path)
+- Sorting scans by creation date
+
+#### ScanFile Model
+
+A simple data class that represents each scan with:
+- File reference (FileSystemEntity)
+- Filename
+- Creation date
+- Formatted date string for display
+
+### Integration with Other Modules
+
+The Saved Scans module integrates with:
+
+1. **ModelViewer Module**: When a user selects a scan to view, it's passed to the ModelViewer
+2. **Scanner Module**: Scans created in the Scanner module appear in the Saved Scans list
+3. **System Share Functionality**: Uses the `share_plus` package to share scans with other apps
+
+## Feature: Model Viewer Module
+
+The Model Viewer module provides 3D visualization functionality for viewing saved scans. It renders OBJ format 3D models with interactive controls for rotation and zoom.
+
+### Structure
+
+```
+feature/model_viewer/
+├── view/                       # UI components
+│   └── model_viewer_view.dart  # 3D model display interface
+└── mixin/                      # Shared functionality
+    └── model_viewer_mixin.dart # File handling and model preparation
+```
+
+### Functionality
+
+The Model Viewer module is responsible for:
+
+- **3D Model Rendering**: Visualizing OBJ files with proper scaling and lighting
+- **Interactive Controls**: Providing pan and pinch gestures for model manipulation
+- **File Preparation**: Converting and optimizing 3D files for display
+- **Error Handling**: Managing file loading issues and display errors
+
+### Implementation Details
+
+#### ModelViewerView (UI)
+
+The main interface in `model_viewer_view.dart` provides:
+- A full-screen 3D model display using the flutter_cube package
+- Loading and error states for model preparation
+- Interactive control instructions
+- Camera positioning and lighting setup
+
+#### ModelViewerMixin (Logic)
+
+The mixin in `model_viewer_mixin.dart` handles:
+- Creating temporary copies of model files for rendering
+- Path resolution and file name sanitization
+- Cleanup of temporary files when the viewer is closed
+- Error handling during file operations
+
+### Technical Approach
+
+The Model Viewer uses `flutter_cube` for 3D rendering which provides:
+- Hardware-accelerated 3D rendering
+- Support for OBJ file format
+- Camera controls for rotation, panning, and zooming
+- Lighting and material support
+
+The module creates temporary copies of model files to ensure that:
+- The original scan files remain untouched
+- Any path or filename issues are resolved before rendering
+- Files are properly cleaned up after viewing
