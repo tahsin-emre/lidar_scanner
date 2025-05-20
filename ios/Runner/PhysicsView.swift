@@ -38,7 +38,11 @@ class PhysicsView: NSObject, FlutterPlatformView, ARSCNViewDelegate {
         return arView.scene.physicsWorld
     }
     
+    // Hiyerarşik yapı için ana düğüm
+    private var rootNode: SCNNode?
     private var scannedNode: SCNNode?
+    // Occlusion mekanizması için mesh'leri toplayacak container
+    private var meshContainer: SCNNode?
     private var physicsObjects = [String: SCNNode]()
     private var lastFrameTime: TimeInterval = 0
     private var frameCount = 0
@@ -51,6 +55,7 @@ class PhysicsView: NSObject, FlutterPlatformView, ARSCNViewDelegate {
     
     // Visual debugging properties
     private var showDebugVisualization: Bool = false
+    private var meshVisibility: Bool = true
     
     // Selected object type for physics objects
     private var selectedObjectType: String = "sphere"
@@ -72,6 +77,19 @@ class PhysicsView: NSObject, FlutterPlatformView, ARSCNViewDelegate {
         arView.session = session
         arView.autoenablesDefaultLighting = true
         arView.automaticallyUpdatesLighting = true
+        
+        // Create root node and container nodes
+        rootNode = SCNNode()
+        rootNode?.position = SCNVector3(0, 0, 0)
+        arView.scene.rootNode.addChildNode(rootNode!)
+        
+        // Scanned model node
+        scannedNode = SCNNode()
+        rootNode?.addChildNode(scannedNode!)
+        
+        // Mesh container for AR mesh anchors
+        meshContainer = SCNNode()
+        rootNode?.addChildNode(meshContainer!)
         
         // Configure debug visualization if needed
         if let args = args as? [String: Any],
@@ -112,7 +130,12 @@ class PhysicsView: NSObject, FlutterPlatformView, ARSCNViewDelegate {
                 // Load asset and convert to SCNScene
                 let asset = MDLAsset(url: url)
                 let scene = SCNScene(mdlAsset: asset)
-                let scannedNode = SCNNode()
+                
+                // Temizlik için önceki scannedNode'u kaldır
+                DispatchQueue.main.async {
+                    // Önce mevcut scannedNode içindeki tüm alt düğümleri temizleyelim
+                    self.scannedNode?.childNodes.forEach { $0.removeFromParentNode() }
+                }
                 
                 // Process all child nodes
                 for child in scene.rootNode.childNodes {
@@ -147,19 +170,17 @@ class PhysicsView: NSObject, FlutterPlatformView, ARSCNViewDelegate {
                         // Set rendering order for occlusion
                         child.renderingOrder = -10
                     }
-                    scannedNode.addChildNode(child)
+                    
+                    // Ana thread'de scannedNode'a ekle - referans olarak taşı
+                    DispatchQueue.main.async {
+                        self.scannedNode?.addChildNode(child)
+                    }
                 }
                 
                 // Update scene on main thread
                 DispatchQueue.main.async {
-                    // Remove existing scanned node if any
-                    self.scannedNode?.removeFromParentNode()
-                    
-                    // Position and add the new scanned node
-                    scannedNode.position = SCNVector3(0, 0, 0)
-                    scannedNode.renderingOrder = -10
-                    self.arView.scene.rootNode.addChildNode(scannedNode)
-                    self.scannedNode = scannedNode
+                    // Mesh görünürlüğünü uygula
+                    self.setMeshVisibility(visible: self.meshVisibility)
                     
                     // Start AR session with mesh reconstruction if supported
                     let configuration = ARWorldTrackingConfiguration()
@@ -427,7 +448,7 @@ class PhysicsView: NSObject, FlutterPlatformView, ARSCNViewDelegate {
                 Float.random(in: -1...1), 
                 Float.random(in: 0...2)
             )
-            
+        
         default:
             geometry = SCNSphere(radius: CGFloat(scale[0]))
             node = SCNNode(geometry: geometry)
@@ -501,7 +522,7 @@ class PhysicsView: NSObject, FlutterPlatformView, ARSCNViewDelegate {
     
     /// Adjust the position of the scanned model in the scene
     func adjustModelPosition(screenDeltaX: Double, screenDeltaY: Double) -> Bool {
-        guard let node = scannedNode, let camera = arView.pointOfView else {
+        guard let rootNode = rootNode, let camera = arView.pointOfView else {
             return false
         }
 
@@ -522,11 +543,11 @@ class PhysicsView: NSObject, FlutterPlatformView, ARSCNViewDelegate {
             moveIncrementRight.z + moveIncrementForward.z
         ) * sensitivity
         
-        // Apply movement
-        node.position = SCNVector3(
-            node.position.x + totalMoveInWorld.x,
-            node.position.y,
-            node.position.z + totalMoveInWorld.z
+        // Apply movement to root node
+        rootNode.position = SCNVector3(
+            rootNode.position.x + totalMoveInWorld.x,
+            rootNode.position.y,
+            rootNode.position.z + totalMoveInWorld.z
         )
 
         return true
@@ -534,30 +555,29 @@ class PhysicsView: NSObject, FlutterPlatformView, ARSCNViewDelegate {
     
     /// Rotate the model around its Y axis
     func rotateModelY(angle: Double) -> Bool {
-        guard let node = scannedNode else {
+        guard let rootNode = rootNode else {
             return false
         }
         
         let angleRadians = Float(angle * .pi / 180.0)
-        let rotationMatrix = SCNMatrix4MakeRotation(angleRadians, 0, 1, 0)
-        node.transform = SCNMatrix4Mult(node.transform, rotationMatrix)
+        rootNode.eulerAngles.y += angleRadians
         
         return true
     }
     
     /// Zoom in/out on the model using the given scale factor
     func zoomModel(scaleFactor: Double) -> Bool {
-        guard let node = scannedNode else {
+        guard let rootNode = rootNode else {
             return false
         }
-        
-        // Geçerli zoom aralığını kontrole et (çok büyük veya çok küçük olmasını engelle)
-        let zoomFactor = Float(scaleFactor)
-        let currentScale = node.scale
         
         // Minimum ve maksimum ölçek sınırları
         let minScale: Float = 0.1
         let maxScale: Float = 5.0
+        
+        // Geçerli zoom aralığını kontrole et
+        let zoomFactor = Float(scaleFactor)
+        let currentScale = rootNode.scale
         
         // Yeni ölçeği hesapla
         let newScale = SCNVector3(
@@ -573,8 +593,9 @@ class PhysicsView: NSObject, FlutterPlatformView, ARSCNViewDelegate {
             return false
         }
         
-        // Yeni ölçeği uygula
-        node.scale = newScale
+        // Tüm hiyerarşiyi aynı anda ölçeklendir
+        rootNode.scale = newScale
+        
         print("PhysicsView: Model zoomed to scale: (\(newScale.x), \(newScale.y), \(newScale.z))")
         
         return true
@@ -582,12 +603,13 @@ class PhysicsView: NSObject, FlutterPlatformView, ARSCNViewDelegate {
     
     /// Reset model position and rotation to origin
     func resetModelPositionToOrigin() -> Bool {
-        guard let node = scannedNode else {
+        guard let rootNode = rootNode else {
             return false
         }
         
-        node.position = SCNVector3(0, 0, 0)
-        node.transform = SCNMatrix4Identity
+        rootNode.position = SCNVector3(0, 0, 0)
+        rootNode.eulerAngles = SCNVector3(0, 0, 0)
+        rootNode.scale = SCNVector3(1, 1, 1)
         
         return true
     }
@@ -597,6 +619,9 @@ class PhysicsView: NSObject, FlutterPlatformView, ARSCNViewDelegate {
         guard let scannedNode = scannedNode else {
             return false
         }
+        
+        // Store mesh visibility state
+        meshVisibility = visible
         
         // Update debug visualization
         if visible && showDebugVisualization {
@@ -612,22 +637,13 @@ class PhysicsView: NSObject, FlutterPlatformView, ARSCNViewDelegate {
             }
         }
         
-        // Apply to parent node if needed
-        if scannedNode.geometry != nil {
-            applyVisibility(to: scannedNode, visible: visible)
-        } else {
-            // Set parent node properties
-            if visible {
-                scannedNode.opacity = 0.8
-                scannedNode.renderingOrder = 0
-                scannedNode.categoryBitMask = 1
-            } else {
-                scannedNode.opacity = 1.0
-                scannedNode.renderingOrder = -1
-                scannedNode.categoryBitMask = 2
+        // Mesh container görünürlüğünü güncelle - AR Mesh Anchor'lar için
+        meshContainer?.enumerateChildNodes { (node, _) in
+            if node.geometry != nil {
+                applyVisibility(to: node, visible: false) // AR mesh'leri her zaman gizli ama fizik etkin
             }
         }
-
+        
         return true
     }
 
@@ -769,179 +785,11 @@ class PhysicsView: NSObject, FlutterPlatformView, ARSCNViewDelegate {
         selectedObjectType = type
         return true
     }
-    
-    /// Start object rain effect with the selected object type
-    func startObjectRain(count: Int, height: Float) -> Bool {
-        let cameraPos = arView.pointOfView?.position ?? SCNVector3(0, 0, 0)
         
-        // Yağmur daha geniş bir alanda oluşsun
-        let rainRadiusHorizontal: Float = 5.0  // Daha geniş yatay yayılım
-        let rainHeight: Float = height + 1.0    // Biraz daha yüksekten
-        
-        print("PhysicsView: Starting object rain with \(count) \(selectedObjectType) objects")
-        
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            guard let self = self else { return }
-            
-            for i in 0..<count {
-                // Kamera etrafında geniş alanda rastgele pozisyon
-                let angle = Float.random(in: 0...(Float.pi * 2))  // 0-360 derece
-                let distance = Float.random(in: 0.5...rainRadiusHorizontal)  // Uzaklık
-                
-                // Polar koordinatları x,z düzlemine çevir
-                let randomX = cameraPos.x + cos(angle) * distance
-                let randomZ = cameraPos.z + sin(angle) * distance
-                
-                // Yükseklik - daha rastgele
-                let randomY = cameraPos.y + rainHeight + Float.random(in: -0.5...1.5)
-                
-                // Başlangıç hızı ve dönüş - her model tipi için farklı
-                var initialVelocity = [
-                    Double.random(in: -0.3...0.3),  // Rastgele x hızı
-                    Double.random(in: -0.1...0.0),  // Hafif aşağı y hızı
-                    Double.random(in: -0.3...0.3)   // Rastgele z hızı
-                ]
-                
-                var initialAngularVelocity = [
-                    Double.random(in: -2...2),  // x ekseni etrafında dönüş
-                    Double.random(in: -2...2),  // y ekseni etrafında dönüş
-                    Double.random(in: -2...2)   // z ekseni etrafında dönüş
-                ]
-                
-                // Model tipine göre ayarlar
-                var scale: [Double]
-                var mass: Double
-                var color: [Int]
-                
-                switch self.selectedObjectType {
-                case "sphere":
-                    scale = [Double.random(in: 0.02...0.06), 
-                             Double.random(in: 0.02...0.06), 
-                             Double.random(in: 0.02...0.06)]
-                    mass = Double.random(in: 0.3...1.0)
-                    
-                    // Toplar için canlı renkler
-                    color = [
-                        Int.random(in: 100...255), // Daha canlı
-                        Int.random(in: 100...255),
-                        Int.random(in: 100...255),
-                        255
-                    ]
-                    
-                case "cube":
-                    scale = [Double.random(in: 0.025...0.05), 
-                             Double.random(in: 0.025...0.05), 
-                             Double.random(in: 0.025...0.05)]
-                    mass = Double.random(in: 1.0...1.5) // Küpler biraz daha ağır
-                    
-                    // Küpler için koyu renkler
-                    color = [
-                        Int.random(in: 50...200),
-                        Int.random(in: 50...200),
-                        Int.random(in: 50...200),
-                        255
-                    ]
-                    
-                case "cylinder":
-                    scale = [Double.random(in: 0.025...0.04), 
-                             Double.random(in: 0.04...0.08), // Yükseklik farklı
-                             Double.random(in: 0.025...0.04)]
-                    mass = Double.random(in: 0.6...1.2)
-                    
-                    // Silindirler için daha sakin renkler
-                    color = [
-                        Int.random(in: 70...180),
-                        Int.random(in: 70...180),
-                        Int.random(in: 70...220),
-                        255
-                    ]
-                    
-                case "coin":
-                    // Coinler daha düzgün boyutlarda olsun
-                    let coinSize = Double.random(in: 0.04...0.06)
-                    scale = [coinSize, 0.008, coinSize]
-                    mass = 1.0 
-                    
-                    // Altın veya Gümüş renk seçeneği
-                    if Bool.random() { // %50 şans
-                        // Altın
-                        color = [215, 165, 25, 255]
-                    } else {
-                        // Gümüş
-                        color = [192, 192, 192, 255]
-                    }
-                    
-                    // Coinlerin daha düzgün düşmesi için başlangıç hızı
-                    initialVelocity = [
-                        Double.random(in: -0.1...0.1),
-                        -0.05, // Sabit düşüş
-                        Double.random(in: -0.1...0.1)
-                    ]
-                    
-                    // Coinlere daha çok dönüş ver
-                    initialAngularVelocity = [
-                        Double.random(in: -0.5...0.5),
-                        Double.random(in: -4...4),  // y ekseni etrafında daha hızlı dön
-                        Double.random(in: -0.5...0.5)
-                    ]
-                    
-                case "usdz":
-                    scale = [0.01, 0.01, 0.01] // USDZ modelleri genellikle daha büyüktür
-                    mass = Double.random(in: 0.5...1.5)
-                    
-                    // USDZ modeller için rastgele renk
-                    color = [
-                        Int.random(in: 50...255),
-                        Int.random(in: 50...255),
-                        Int.random(in: 50...255),
-                        255
-                    ]
-                    
-                default:
-                    scale = [0.05, 0.05, 0.05] 
-                    mass = 1.0
-                    color = [
-                        Int.random(in: 50...255),
-                        Int.random(in: 50...255),
-                        Int.random(in: 50...255),
-                        255
-                    ]
-                }
-                
-                // Benzersiz ID oluştur
-                let objectId = "rain_\(self.selectedObjectType)_\(i)_\(Date().timeIntervalSince1970)"
-                
-                // Obje datasını oluştur
-                let objectData: [String: Any] = [
-                    "id": objectId,
-                    "type": self.selectedObjectType,
-                    "position": [Double(randomX), Double(randomY), Double(randomZ)],
-                    "scale": scale,
-                    "color": color,
-                    "mass": mass,
-                    "velocity": initialVelocity,
-                    "angularVelocity": initialAngularVelocity
-                ]
-                
-                // Ana thread'de objeyi ekle
-                DispatchQueue.main.async {
-                    _ = self.addPhysicsObject(objectData: objectData)
-                }
-                
-                // Tüm objelerin aynı anda spawn edilmemesi için delay
-                if i % 3 == 0 {
-                    Thread.sleep(forTimeInterval: 0.03)
-                }
-            }
-        }
-        
-        return true
-    }
-    
     /// Confirm that LiDAR mesh occlusion is enabled in the AR configuration
     func confirmLiDAREnabled() {
         if let configuration = arView.session.configuration as? ARWorldTrackingConfiguration,
-           ARWorldTrackingConfiguration.supportsSceneReconstruction(.mesh) {
+        ARWorldTrackingConfiguration.supportsSceneReconstruction(.mesh) {
             
             // Ensure mesh reconstruction is enabled
             if configuration.sceneReconstruction != .mesh {
@@ -1008,6 +856,8 @@ extension PhysicsView: ARSessionDelegate {
     }
     
     private func addMeshAnchor(_ meshAnchor: ARMeshAnchor) {
+        guard let meshContainer = meshContainer else { return }
+        
         let geometry = SCNGeometry.from(meshAnchor: meshAnchor)
         let material = SCNMaterial()
         
@@ -1029,8 +879,9 @@ extension PhysicsView: ARSessionDelegate {
         node.castsShadow = false
         node.transform = SCNMatrix4(meshAnchor.transform)
 
-        // Add occlusion node to scene
-        arView.scene.rootNode.addChildNode(node)
+        // Add occlusion node to the mesh container instead of the scene directly
+        // This way it will inherit the scaling and transformation from the root node
+        meshContainer.addChildNode(node)
         
         print("Added mesh anchor for occlusion")
     }

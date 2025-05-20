@@ -289,28 +289,4 @@ class PhysicsService {
       return false;
     }
   }
-
-  /// Start raining objects of the specified type
-  Future<bool> startObjectRain({
-    required String type,
-    int count = 20,
-    double height = 2.0,
-  }) async {
-    try {
-      _logger.info(
-        'Starting object rain with $count objects of type: $type, '
-        'viewId: $_viewId',
-      );
-      final result = await _channel.invokeMethod<bool>('startObjectRain', {
-        'type': type,
-        'count': count,
-        'height': height,
-        'viewId': _viewId,
-      });
-      return result ?? false;
-    } on PlatformException catch (e) {
-      _logger.warning('Error starting object rain: ${e.message}');
-      return false;
-    }
-  }
 }

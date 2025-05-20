@@ -204,13 +204,7 @@ class PhysicsViewFactory: NSObject, FlutterPlatformViewFactory {
             let success = physicsView.setSelectedObject(type: type)
             result(success)
             
-        case "startObjectRain":
-            let count = args["count"] as? Int ?? 20
-            let height = Float(args["height"] as? Double ?? 2.0)
-            
-            print("PhysicsViewFactory: Starting object rain with \(count) objects at height \(height) for view ID \(viewId)")
-            let success = physicsView.startObjectRain(count: count, height: height)
-            result(success)
+       
             
         default:
             result(FlutterMethodNotImplemented)
