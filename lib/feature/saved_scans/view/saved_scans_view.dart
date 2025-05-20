@@ -3,6 +3,8 @@ import 'package:lidar_scanner/feature/interactive_physics/view/interactive_physi
 import 'package:lidar_scanner/feature/model_viewer/view/model_viewer_view.dart';
 import 'package:lidar_scanner/feature/saved_scans/mixin/saved_scans_mixin.dart';
 import 'package:lidar_scanner/product/utils/extensions/widget_ext.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:cross_file/cross_file.dart';
 
 class SavedScansView extends StatefulWidget {
   const SavedScansView({super.key});
@@ -65,6 +67,17 @@ class _SavedScansViewState extends State<SavedScansView> with SavedScansMixin {
               ListTile(
                 leading: const Icon(Icons.view_in_ar),
                 title: Text(scanFile.fileName),
+                trailing: IconButton(
+                  icon: const Icon(Icons.share),
+                  onPressed: () {
+                    SharePlus.instance.share(
+                      ShareParams(
+                        files: [XFile(scanFile.file.path)],
+                        subject: scanFile.fileName,
+                      ),
+                    );
+                  },
+                ),
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -82,8 +95,8 @@ class _SavedScansViewState extends State<SavedScansView> with SavedScansMixin {
                 ),
                 isThreeLine: true,
               ),
-              ButtonBar(
-                alignment: MainAxisAlignment.spaceEvenly,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   _ActionButton(
                     icon: Icons.visibility,
