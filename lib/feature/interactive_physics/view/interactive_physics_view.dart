@@ -41,11 +41,38 @@ class _InteractivePhysicsViewState extends State<InteractivePhysicsView>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('Interactive Physics'),
+        title: const Text(
+          'Interactive Physics',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+            color: Colors.white,
+            shadows: [
+              Shadow(
+                color: Colors.black54,
+                offset: Offset(0, 1),
+                blurRadius: 3,
+              ),
+            ],
+          ),
+        ),
+        backgroundColor: Colors.black.withOpacity(0.4),
+        elevation: 0,
+        centerTitle: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(20),
+          ),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.restart_alt),
+            icon: const Icon(
+              Icons.restart_alt,
+              color: Colors.white,
+              size: 28,
+            ),
             tooltip: 'Reset simulation',
             onPressed: physicsCubit.resetSimulation,
           ),
@@ -98,23 +125,72 @@ class _InteractivePhysicsViewState extends State<InteractivePhysicsView>
               // Error message
               if (state.error != null && !state.isLoading)
                 Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
+                  child: Container(
+                    margin: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.black87,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Colors.red.shade300,
+                        width: 2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.red.withOpacity(0.3),
+                          blurRadius: 12,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        const Icon(
+                          Icons.error_outline,
+                          color: Colors.red,
+                          size: 50,
+                        ),
+                        const SizedBox(height: 12),
                         Text(
-                          'Error: ${state.error}',
-                          style: const TextStyle(color: Colors.red),
+                          'Hata Oluştu',
+                          style: TextStyle(
+                            color: Colors.red.shade300,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          '${state.error}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                          ),
                           textAlign: TextAlign.center,
                         ),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
+                        const SizedBox(height: 24),
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Tekrar Dene'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red.shade700,
+                            foregroundColor: Colors.white,
+                            elevation: 5,
+                            shadowColor: Colors.red.shade900,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 12,
+                            ),
+                            textStyle: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
                           onPressed: () {
                             physicsCubit.initializePhysics(
                                 scanPath: widget.scanPath);
                           },
-                          child: const Text('Try Again'),
                         ),
                       ],
                     ),
@@ -161,35 +237,11 @@ class _InteractivePhysicsViewState extends State<InteractivePhysicsView>
                   ),
                 ),
 
-              // Instructions for drag alignment
-              if (!state.isLoading &&
-                  state.error == null &&
-                  !state.isAlignmentComplete)
-                Positioned(
-                  top: 20,
-                  left: 0,
-                  right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    margin: const EdgeInsets.symmetric(horizontal: 20),
-                    decoration: BoxDecoration(
-                      color: Colors.black
-                          .withValues(alpha: 178, red: 0, green: 0, blue: 0),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: const Text(
-                      'Drag anywhere on screen to move the model',
-                      style: TextStyle(color: Colors.white),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-
               // Stats display (optional)
               if (state.showStats && !state.isLoading && state.error == null)
                 Positioned(
-                  top: 80,
-                  right: 20,
+                  top: 120,
+                  right: 6,
                   child: _StatsOverlay(
                     objectCount: state.objects.length,
                     fps: state.fps,
@@ -230,7 +282,7 @@ class _PhysicsARView extends StatefulWidget {
 
 class _PhysicsARViewState extends State<_PhysicsARView> {
   bool _arViewCreated = false;
-  double _previousScale = 1.0;
+  double _previousScale = 1;
 
   @override
   Widget build(BuildContext context) {
@@ -405,10 +457,10 @@ class _AlignmentControls extends StatelessWidget {
                 ),
               ),
               TextButton.icon(
-                icon: const Icon(Icons.check_circle, color: Colors.white),
+                icon: const Icon(Icons.check_circle, color: Colors.black),
                 label: const Text(
                   'Confirm',
-                  style: TextStyle(color: Colors.white),
+                  style: TextStyle(color: Colors.black),
                 ),
                 onPressed: onConfirmAlignment,
                 style: TextButton.styleFrom(
@@ -482,12 +534,12 @@ class _PrecisionSelectorState extends State<_PrecisionSelector> {
             backgroundColor: WidgetStateProperty.resolveWith<Color>(
               (Set<WidgetState> states) {
                 if (states.contains(WidgetState.selected)) {
-                  return Colors.blue.shade600;
+                  return Colors.blue;
                 }
-                return Colors.grey.shade800;
+                return Colors.grey;
               },
             ),
-            foregroundColor: WidgetStateProperty.all(Colors.white),
+            foregroundColor: WidgetStateProperty.all(Colors.blue),
           ),
         ),
       ],
@@ -515,23 +567,52 @@ class _ObjectControlsState extends State<_ObjectControls> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
       margin: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 178, red: 0, green: 0, blue: 0),
-        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          colors: [
+            Colors.black.withOpacity(0.85),
+            Colors.blueGrey.withOpacity(0.7),
+          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.2),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.4),
+            blurRadius: 10,
+            spreadRadius: 1,
+          ),
+        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          const Padding(
+            padding: EdgeInsets.only(bottom: 8),
+            child: Text(
+              'Eklemek İstediğiniz Objeyi Seçin',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
           _buildObjectSelector(),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: 10,
+            runSpacing: 10,
             alignment: WrapAlignment.center,
             children: [
-              _buildRainButton(),
               _buildMeshButton(),
               _buildClearButton(),
             ],
@@ -541,161 +622,114 @@ class _ObjectControlsState extends State<_ObjectControls> {
     );
   }
 
-  Widget _buildRainButton() {
-    return TextButton.icon(
-      icon: const Icon(Icons.cloud_download, color: Colors.white, size: 20),
-      label: FittedBox(
-        child: Text(
-          'Rain $_selectedObjectType',
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 12,
-          ),
-        ),
-      ),
-      onPressed: () {
-        widget.physicsCubit.startObjectRain(
-          type: _selectedObjectType,
-          count: 30,
-          height: 25 / 10,
-        );
-      },
-      style: ButtonStyle(
-        backgroundColor: MaterialStateProperty.all(
-          Colors.green.shade700.withValues(
-            alpha: 204,
-            red: 56,
-            green: 142,
-            blue: 60,
-          ),
-        ),
-        padding: MaterialStateProperty.all(
-          const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 8,
-          ),
-        ),
-        shape: MaterialStateProperty.all(
-          RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-        ),
-        elevation: MaterialStateProperty.all(2),
-        shadowColor: MaterialStateProperty.all(Colors.black.withOpacity(0.3)),
-        overlayColor: MaterialStateProperty.resolveWith<Color>(
-          (Set<MaterialState> states) {
-            if (states.contains(MaterialState.pressed)) {
-              return Colors.white.withOpacity(0.2);
-            }
-            return Colors.transparent;
-          },
-        ),
-      ),
-    );
-  }
-
   Widget _buildMeshButton() {
-    return TextButton.icon(
-      icon: Icon(
-        _isMeshVisible ? Icons.grid_off : Icons.grid_on,
-        color: Colors.white,
-        size: 20,
-      ),
-      label: Text(
-        _isMeshVisible ? 'Hide' : 'Show',
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 12,
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: _isMeshVisible
+              ? [Colors.orange.shade400, Colors.deepOrange.shade600]
+              : [Colors.blue.shade400, Colors.indigo.shade600],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-      ),
-      onPressed: () {
-        setState(() {
-          _isMeshVisible = !_isMeshVisible;
-        });
-        widget.physicsCubit.toggleMeshVisibility(isVisible: _isMeshVisible);
-      },
-      style: ButtonStyle(
-        backgroundColor: MaterialStateProperty.all(
-          _isMeshVisible
-              ? Colors.orange.withValues(
-                  alpha: 153,
-                  red: 255,
-                  green: 165,
-                  blue: 0,
-                )
-              : Colors.blue.withValues(
-                  alpha: 153,
-                  red: 33,
-                  green: 150,
-                  blue: 243,
-                ),
-        ),
-        padding: MaterialStateProperty.all(
-          const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 8,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: _isMeshVisible
+                ? Colors.orange.withOpacity(0.4)
+                : Colors.blue.withOpacity(0.4),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
           ),
-        ),
-        shape: MaterialStateProperty.all(
-          RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-        ),
-        elevation: MaterialStateProperty.all(2),
-        shadowColor: MaterialStateProperty.all(Colors.black.withOpacity(0.3)),
-        overlayColor: MaterialStateProperty.resolveWith<Color>(
-          (Set<MaterialState> states) {
-            if (states.contains(MaterialState.pressed)) {
-              return Colors.white.withOpacity(0.2);
-            }
-            return Colors.transparent;
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            setState(() {
+              _isMeshVisible = !_isMeshVisible;
+            });
+            widget.physicsCubit.toggleMeshVisibility(isVisible: _isMeshVisible);
           },
+          borderRadius: BorderRadius.circular(12),
+          splashColor: Colors.white24,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  _isMeshVisible ? Icons.grid_off : Icons.grid_on,
+                  color: Colors.white,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  _isMeshVisible ? 'Hide Mesh' : 'Show Mesh',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
 
   Widget _buildClearButton() {
-    return TextButton.icon(
-      icon: const Icon(Icons.delete_sweep, color: Colors.white, size: 20),
-      label: const Text(
-        'Clear',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 12,
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.red.shade400, Colors.deepOrange.shade700],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.red.withOpacity(0.4),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
-      onPressed: widget.onClearObjects,
-      style: ButtonStyle(
-        backgroundColor: MaterialStateProperty.all(
-          Colors.red.withValues(
-            alpha: 153,
-            red: 244,
-            green: 67,
-            blue: 54,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: widget.onClearObjects,
+          borderRadius: BorderRadius.circular(12),
+          splashColor: Colors.white24,
+          child: const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.delete_sweep,
+                  color: Colors.white,
+                  size: 20,
+                ),
+                SizedBox(width: 8),
+                Text(
+                  'Clear All',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        padding: MaterialStateProperty.all(
-          const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 8,
-          ),
-        ),
-        shape: MaterialStateProperty.all(
-          RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-        ),
-        elevation: MaterialStateProperty.all(2),
-        shadowColor: MaterialStateProperty.all(Colors.black.withOpacity(0.3)),
-        overlayColor: MaterialStateProperty.resolveWith<Color>(
-          (Set<MaterialState> states) {
-            if (states.contains(MaterialState.pressed)) {
-              return Colors.white.withOpacity(0.2);
-            }
-            return Colors.transparent;
-          },
         ),
       ),
     );
@@ -704,14 +738,14 @@ class _ObjectControlsState extends State<_ObjectControls> {
   Widget _buildObjectSelector() {
     return SizedBox(
       height: 80,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        spacing: 8,
         children: [
           _objectOption('sphere', 'Sphere', Icons.circle),
           _objectOption('cube', 'Cube', Icons.crop_square_sharp),
           _objectOption('cylinder', 'Cylinder', Icons.crop_portrait),
           _objectOption('coin', 'Coin', Icons.monetization_on),
-          _objectOption('usdz', '1 Dollar', Icons.view_in_ar),
         ],
       ),
     );
@@ -720,51 +754,84 @@ class _ObjectControlsState extends State<_ObjectControls> {
   Widget _objectOption(String type, String label, IconData icon) {
     final isSelected = _selectedObjectType == type;
 
-    return InkWell(
-      onTap: () {
-        setState(() {
-          _selectedObjectType = type;
-        });
-        widget.physicsCubit.setSelectedObjectType(type);
-      },
-      borderRadius: BorderRadius.circular(8),
-      splashColor: Colors.white.withOpacity(0.2),
-      highlightColor: Colors.white.withOpacity(0.1),
-      child: Container(
-        width: 70,
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? Colors.blue.withValues(
-                  alpha: 255,
-                  red: 33,
-                  green: 150,
-                  blue: 243,
-                )
-              : Colors.grey.shade800,
-          borderRadius: BorderRadius.circular(8),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 2,
-              offset: const Offset(0, 1),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: Colors.white, size: 28),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: const TextStyle(
+    // Obje tipine göre özel renkler
+    Color getColorForType(String type, bool isSelected) {
+      if (!isSelected) return Colors.grey.shade800;
+
+      switch (type) {
+        case 'sphere':
+          return Colors.blue.shade500;
+        case 'cube':
+          return Colors.purple.shade500;
+        case 'cylinder':
+          return Colors.teal.shade500;
+        case 'coin':
+          return Colors.amber.shade600;
+        case 'usdz':
+          return Colors.green.shade500;
+        default:
+          return Colors.blue.shade500;
+      }
+    }
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      width: 70,
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      decoration: BoxDecoration(
+        color: getColorForType(type, isSelected),
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: isSelected
+                ? getColorForType(type, true).withOpacity(0.6)
+                : Colors.black.withOpacity(0.2),
+            blurRadius: isSelected ? 8 : 2,
+            spreadRadius: isSelected ? 2 : 0,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        border: isSelected ? Border.all(color: Colors.white, width: 2) : null,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            setState(() {
+              _selectedObjectType = type;
+            });
+            widget.physicsCubit.setSelectedObjectType(type);
+          },
+          borderRadius: BorderRadius.circular(10),
+          splashColor: Colors.white.withOpacity(0.3),
+          highlightColor: Colors.white.withOpacity(0.1),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
                 color: Colors.white,
-                fontWeight: FontWeight.w500,
-                fontSize: 12,
+                size: isSelected ? 32 : 26,
               ),
-            ),
-          ],
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  fontSize: 12,
+                  shadows: isSelected
+                      ? [
+                          const Shadow(
+                              color: Colors.black54,
+                              blurRadius: 2,
+                              offset: Offset(0, 1))
+                        ]
+                      : null,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

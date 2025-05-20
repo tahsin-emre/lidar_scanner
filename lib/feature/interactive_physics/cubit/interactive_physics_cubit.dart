@@ -17,7 +17,6 @@ class InteractivePhysicsCubit extends Cubit<InteractivePhysicsState> {
 
   final PhysicsService _physicsService;
   Timer? _fpsUpdateTimer;
-  Timer? _objectRainTimer;
   int _arViewId = -1;
   final _random = math.Random();
 
@@ -218,101 +217,6 @@ class InteractivePhysicsCubit extends Cubit<InteractivePhysicsState> {
   }
 
   /// Starts the periodic spawning of random objects.
-  void _startObjectRain() {
-    _stopObjectRain(); // Ensure any existing timer is stopped before starting a new one
-    _objectRainTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
-      if (!state.isSimulationRunning || !state.isAlignmentComplete) {
-        timer
-            .cancel(); // Stop timer if simulation is no longer in the correct state
-        return;
-      }
-      _spawnRandomObject();
-    });
-    debugPrint('InteractivePhysicsCubit: Object rain started.');
-    // Spawn a few objects immediately to kick things off
-    for (var i = 0; i < 3; i++) {
-      Future<void>.delayed(
-        Duration(milliseconds: 300 * i + 100),
-        _spawnRandomObject,
-      );
-    }
-  }
-
-  /// Stops the periodic spawning of random objects.
-  void _stopObjectRain() {
-    _objectRainTimer?.cancel();
-    _objectRainTimer = null;
-    debugPrint('InteractivePhysicsCubit: Object rain stopped.');
-  }
-
-  /// Spawn a random object above the scene to simulate raining objects.
-  Future<void> _spawnRandomObject() async {
-    if (!_isARViewValid() ||
-        !state.isSimulationRunning ||
-        !state.isAlignmentComplete) {
-      return; // Do not spawn if simulation is not ready
-    }
-
-    try {
-      // Get camera position to spawn object above and slightly around it
-      final cameraPosition = await _physicsService.getCameraPosition();
-      if (cameraPosition == null || cameraPosition.length < 3) {
-        debugPrint(
-          'InteractivePhysicsCubit: Failed to get camera position for '
-          'spawning object.',
-        );
-        return;
-      }
-
-      // Choose random object type
-      const objectTypes = PhysicsObjectType.values;
-      final randomType = objectTypes[_random.nextInt(objectTypes.length)];
-
-      // Position above camera with random horizontal offset
-      final spawnPosition = [
-        cameraPosition[0] +
-            (_random.nextDouble() * 2.0 - 1.0) *
-                1.5, // Random X offset within ±1.5m
-        cameraPosition[1] +
-            2.5 +
-            _random.nextDouble() * 1.0, // 2.5m to 3.5m above camera
-        cameraPosition[2] +
-            (_random.nextDouble() * 2.0 - 1.0) *
-                1.5, // Random Z offset within ±1.5m
-      ];
-
-      final object = PhysicsObject(
-        id: 'rain_${DateTime.now().millisecondsSinceEpoch}_'
-            '${_random.nextInt(1000)}',
-        type: randomType,
-        position: spawnPosition,
-        rotation: _getRandomRotation(),
-        scale: _getScaleForObjectType(randomType),
-        velocity: const [0, -0.5, 0], // Slight initial downward velocity
-        angularVelocity: [
-          _random.nextDouble() * 1.0 - 0.5,
-          _random.nextDouble() * 1.0 - 0.5,
-          _random.nextDouble() * 1.0 - 0.5,
-        ],
-        mass: _getMassForObjectType(randomType),
-        color: _getRandomColor(),
-      );
-
-      final success = await _physicsService.addPhysicsObject(object);
-      if (success) {
-        debugPrint(
-          'InteractivePhysicsCubit: Spawned random object: ${object.id}',
-        );
-      } else {
-        debugPrint(
-          'InteractivePhysicsCubit: Failed to add rained object ${object.id} '
-          'via service.',
-        );
-      }
-    } on Exception catch (e) {
-      debugPrint('InteractivePhysicsCubit: Error spawning random object: $e');
-    }
-  }
 
   /// Get random rotation quaternion
   List<double> _getRandomRotation() {
@@ -364,8 +268,10 @@ class InteractivePhysicsCubit extends Cubit<InteractivePhysicsState> {
       }
 
       debugPrint('Placing object at world position: $worldPosition');
+      debugPrint(
+          'Current selected object type: ${state.selectedObjectType.name}');
 
-      // Create new physics object
+      // Create new physics object with the currently selected object type
       final object = PhysicsObject(
         id: 'obj_${DateTime.now().millisecondsSinceEpoch}_'
             '${_random.nextInt(1000)}',
@@ -383,7 +289,8 @@ class InteractivePhysicsCubit extends Cubit<InteractivePhysicsState> {
       final success = await _physicsService.addPhysicsObject(object);
 
       if (success) {
-        debugPrint('Successfully added object ${object.id}');
+        debugPrint(
+            'Successfully added object ${object.id} of type ${object.type.name}');
         final updatedObjects = List<PhysicsObject>.from(state.objects)
           ..add(object);
         emit(state.copyWith(objects: updatedObjects));
@@ -400,7 +307,6 @@ class InteractivePhysicsCubit extends Cubit<InteractivePhysicsState> {
   Future<void> resetSimulation() async {
     if (!_isARViewValid()) return;
 
-    _stopObjectRain(); // Stop any ongoing object rain
     try {
       await _physicsService.clearObjects();
       emit(state
@@ -408,10 +314,6 @@ class InteractivePhysicsCubit extends Cubit<InteractivePhysicsState> {
       debugPrint(
         'InteractivePhysicsCubit: Simulation reset. All objects cleared.',
       );
-      // Restart the object rain if alignment was already complete
-      if (state.isAlignmentComplete) {
-        _startObjectRain();
-      }
     } on Exception catch (e) {
       debugPrint('InteractivePhysicsCubit: Error resetting simulation: $e');
     }
@@ -421,10 +323,8 @@ class InteractivePhysicsCubit extends Cubit<InteractivePhysicsState> {
   void stopSimulation() {
     // Cancel all timers
     _fpsUpdateTimer?.cancel();
-    _objectRainTimer?.cancel();
 
     // Clear state
-    _objectRainTimer = null;
     _fpsUpdateTimer = null;
 
     debugPrint('Physics simulation stopped completely');
@@ -470,43 +370,41 @@ class InteractivePhysicsCubit extends Cubit<InteractivePhysicsState> {
 
     try {
       await _physicsService.setSelectedObject(type);
+
+      // String tipini PhysicsObjectType'a çevir ve state'i güncelle
+      PhysicsObjectType objectType;
+      switch (type) {
+        case 'sphere':
+          objectType = PhysicsObjectType.sphere;
+          break;
+        case 'cube':
+          objectType = PhysicsObjectType.cube;
+          break;
+        case 'cylinder':
+          objectType = PhysicsObjectType.cylinder;
+          break;
+        case 'coin':
+          objectType = PhysicsObjectType.coin;
+          break;
+        default:
+          objectType =
+              PhysicsObjectType.sphere; // Bilinmeyen tip için varsayılan
+          break;
+      }
+
+      // State'i güncelle
+      emit(state.copyWith(selectedObjectType: objectType));
+
       debugPrint(
-        'InteractivePhysicsCubit: Selected object type set to: $type',
+        'InteractivePhysicsCubit: Selected object type set to: $type (${objectType.name})',
       );
     } on Exception catch (e) {
       debugPrint('InteractivePhysicsCubit: Error setting object type: $e');
     }
   }
 
-  /// Start raining objects of the selected type
-  ///
-  /// @param type The type of object to rain
-  /// @param count The number of objects to rain
-  /// @param height The height above the camera to start raining from
-  Future<void> startObjectRain({
-    required String type,
-    int count = 30,
-    double height = 2.0,
-  }) async {
-    if (!_isARViewValid() || !state.isSimulationRunning) return;
-
-    try {
-      await _physicsService.startObjectRain(
-        type: type,
-        count: count,
-        height: height,
-      );
-      debugPrint(
-        'InteractivePhysicsCubit: Started raining $count objects of type: $type',
-      );
-    } on Exception catch (e) {
-      debugPrint('InteractivePhysicsCubit: Error starting object rain: $e');
-    }
-  }
-
   @override
   Future<void> close() {
-    _stopObjectRain(); // Stop object rain when Cubit is closed
     _fpsUpdateTimer?.cancel();
     // _physicsService.dispose(); // This is often handled by GetIt or the service itself if it has a dispose method managed elsewhere
     debugPrint('InteractivePhysicsCubit: Closed and timers cancelled.');
