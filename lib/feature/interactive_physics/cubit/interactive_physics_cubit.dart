@@ -216,31 +216,6 @@ class InteractivePhysicsCubit extends Cubit<InteractivePhysicsState> {
     }
   }
 
-  /// Starts the periodic spawning of random objects.
-
-  /// Get random rotation quaternion
-  List<double> _getRandomRotation() {
-    // Generate random euler angles
-    final yaw = _random.nextDouble() * math.pi * 2;
-    final pitch = _random.nextDouble() * math.pi;
-    final roll = _random.nextDouble() * math.pi * 2;
-
-    // Simple quaternion from Euler angles (not perfect but works for this)
-    final cy = math.cos(yaw * 0.5);
-    final sy = math.sin(yaw * 0.5);
-    final cp = math.cos(pitch * 0.5);
-    final sp = math.sin(pitch * 0.5);
-    final cr = math.cos(roll * 0.5);
-    final sr = math.sin(roll * 0.5);
-
-    return [
-      cy * cp * sr - sy * sp * cr, // x
-      sy * cp * sr + cy * sp * cr, // y
-      sy * cp * cr - cy * sp * sr, // z
-      cy * cp * cr + sy * sp * sr, // w
-    ];
-  }
-
   /// Select an object type for placement
   void selectObjectType(PhysicsObjectType type) {
     emit(state.copyWith(selectedObjectType: type));
@@ -376,20 +351,15 @@ class InteractivePhysicsCubit extends Cubit<InteractivePhysicsState> {
       switch (type) {
         case 'sphere':
           objectType = PhysicsObjectType.sphere;
-          break;
         case 'cube':
           objectType = PhysicsObjectType.cube;
-          break;
         case 'cylinder':
           objectType = PhysicsObjectType.cylinder;
-          break;
         case 'coin':
           objectType = PhysicsObjectType.coin;
-          break;
         default:
           objectType =
               PhysicsObjectType.sphere; // Bilinmeyen tip için varsayılan
-          break;
       }
 
       // State'i güncelle

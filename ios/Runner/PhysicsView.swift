@@ -207,20 +207,160 @@ class PhysicsView: NSObject, FlutterPlatformView, ARSCNViewDelegate {
         case "sphere":
             geometry = SCNSphere(radius: CGFloat(scale[0]))
             node = SCNNode(geometry: geometry)
+            
+            // Küre için özel materyal
+            let sphereMaterial = SCNMaterial()
+            sphereMaterial.diffuse.contents = UIColor(
+                red: CGFloat(colorData[0]) / 255.0,
+                green: CGFloat(colorData[1]) / 255.0,
+                blue: CGFloat(colorData[2]) / 255.0,
+                alpha: CGFloat(colorData[3]) / 255.0
+            )
+            sphereMaterial.metalness.contents = 0.6
+            sphereMaterial.roughness.contents = 0.3
+            sphereMaterial.lightingModel = .physicallyBased
+            node.geometry?.materials = [sphereMaterial]
+            
+            // Fizik özelliklerini ayarla
+            let spherePhysicsShape = SCNPhysicsShape(
+                geometry: geometry,
+                options: [
+                    SCNPhysicsShape.Option.keepAsCompound: false,
+                    SCNPhysicsShape.Option.collisionMargin: 0.01
+                ]
+            )
+            
+            node.physicsBody = SCNPhysicsBody(type: .dynamic, shape: spherePhysicsShape)
+            node.physicsBody?.mass = CGFloat(mass)
+            node.physicsBody?.restitution = 0.7    // Daha çok zıplasın
+            node.physicsBody?.rollingFriction = 0.1 // Yuvarlanma direnci çok düşük
+            node.physicsBody?.friction = 0.2       // Az sürtünme
+            
+            // Çarpışma maskeleri
+            node.physicsBody?.categoryBitMask = 2
+            node.physicsBody?.collisionBitMask = 1 + 2 + 4
+            node.physicsBody?.contactTestBitMask = 1 + 2
+            
+            // Rastgele dönüş hareketi
+            node.physicsBody?.angularVelocity = SCNVector4(
+                Float.random(in: -2...2),
+                Float.random(in: -2...2),
+                Float.random(in: -2...2),
+                Float.random(in: 0...3)
+            )
+            
         case "cube":
             geometry = SCNBox(
                 width: CGFloat(scale[0] * 2),
                 height: CGFloat(scale[1] * 2),
                 length: CGFloat(scale[2] * 2),
-                chamferRadius: 0
+                chamferRadius: 0.001 // Hafif yuvarlatılmış kenarlar
             )
             node = SCNNode(geometry: geometry)
+            
+            // Küp için özel materyal
+            let cubeMaterial = SCNMaterial()
+            cubeMaterial.diffuse.contents = UIColor(
+                red: CGFloat(colorData[0]) / 255.0,
+                green: CGFloat(colorData[1]) / 255.0,
+                blue: CGFloat(colorData[2]) / 255.0,
+                alpha: CGFloat(colorData[3]) / 255.0
+            )
+            cubeMaterial.metalness.contents = 0.3
+            cubeMaterial.roughness.contents = 0.6
+            cubeMaterial.lightingModel = .physicallyBased
+            
+            // Tüm yüzeylere aynı materyal
+            node.geometry?.materials = Array(repeating: cubeMaterial, count: 6)
+            
+            // Fizik özelliklerini ayarla
+            let cubePhysicsShape = SCNPhysicsShape(
+                geometry: geometry,
+                options: [
+                    SCNPhysicsShape.Option.keepAsCompound: false,
+                    SCNPhysicsShape.Option.collisionMargin: 0.01
+                ]
+            )
+            
+            node.physicsBody = SCNPhysicsBody(type: .dynamic, shape: cubePhysicsShape)
+            node.physicsBody?.mass = CGFloat(mass)
+            node.physicsBody?.restitution = 0.4    // Orta seviye zıplama
+            node.physicsBody?.rollingFriction = 0.5 // Yuvarlanma direnci yüksek
+            node.physicsBody?.friction = 0.6       // Yüksek sürtünme
+            
+            // Çarpışma maskeleri
+            node.physicsBody?.categoryBitMask = 2
+            node.physicsBody?.collisionBitMask = 1 + 2 + 4
+            node.physicsBody?.contactTestBitMask = 1 + 2
+            
+            // Rastgele dönüş hareketi
+            node.physicsBody?.angularVelocity = SCNVector4(
+                Float.random(in: -1.5...1.5),
+                Float.random(in: -1.5...1.5),
+                Float.random(in: -1.5...1.5),
+                Float.random(in: 0...2)
+            )
+            
         case "cylinder":
             geometry = SCNCylinder(
                 radius: CGFloat(scale[0]),
                 height: CGFloat(scale[1] * 2)
             )
             node = SCNNode(geometry: geometry)
+            
+            // Silindir için özel materyal
+            let cylinderMaterial = SCNMaterial()
+            cylinderMaterial.diffuse.contents = UIColor(
+                red: CGFloat(colorData[0]) / 255.0,
+                green: CGFloat(colorData[1]) / 255.0,
+                blue: CGFloat(colorData[2]) / 255.0,
+                alpha: CGFloat(colorData[3]) / 255.0
+            )
+            cylinderMaterial.metalness.contents = 0.4
+            cylinderMaterial.roughness.contents = 0.5
+            cylinderMaterial.lightingModel = .physicallyBased
+            
+            // Üst ve alt kapaklar için materyal
+            let capMaterial = SCNMaterial()
+            capMaterial.diffuse.contents = cylinderMaterial.diffuse.contents
+            capMaterial.metalness.contents = cylinderMaterial.metalness.contents
+            capMaterial.roughness.contents = 0.7 // Kapaklar daha pürüzlü
+            capMaterial.lightingModel = .physicallyBased
+            
+            // Silindirin yan yüzeyi ve kapakları için materyal ayarla
+            node.geometry?.materials = [cylinderMaterial, capMaterial, capMaterial]
+            
+            // Silindir yatay konumda olsun
+            node.eulerAngles = SCNVector3(Float.pi/2, 0, 0)
+            
+            // Fizik özelliklerini ayarla
+            let cylinderPhysicsShape = SCNPhysicsShape(
+                geometry: geometry,
+                options: [
+                    SCNPhysicsShape.Option.keepAsCompound: false,
+                    SCNPhysicsShape.Option.collisionMargin: 0.01
+                ]
+            )
+            
+            node.physicsBody = SCNPhysicsBody(type: .dynamic, shape: cylinderPhysicsShape)
+            node.physicsBody?.mass = CGFloat(mass)
+            node.physicsBody?.restitution = 0.5    // Orta seviye zıplama
+            node.physicsBody?.rollingFriction = 0.3 // Orta seviye yuvarlanma direnci
+            node.physicsBody?.friction = 0.4       // Orta seviye sürtünme
+            
+            // Çarpışma maskeleri
+            node.physicsBody?.categoryBitMask = 2
+            node.physicsBody?.collisionBitMask = 1 + 2 + 4
+            node.physicsBody?.contactTestBitMask = 1 + 2
+            
+            // Rastgele dönüş hareketi - silindirler için daha fazla yuvarlanma
+            node.physicsBody?.angularVelocity = SCNVector4(
+                Float.random(in: -0.5...0.5),
+                Float.random(in: -2...2),
+                Float.random(in: -0.5...0.5),
+                Float.random(in: 0...3)
+            )
+            
         case "coin":
             // Madeni para - ince yassı bir silindir
             geometry = SCNCylinder(
@@ -288,118 +428,6 @@ class PhysicsView: NSObject, FlutterPlatformView, ARSCNViewDelegate {
                 Float.random(in: 0...2)
             )
             
-            // SCNCylinder'da chamferRadius olmadığı için kenarlar için ekstra işlem yapamıyoruz
-            // Görsel olarak daha iyi görünmesi için kenar materyaline odaklanıyoruz
-        case "usdz":
-            // Try to load USDZ model
-            // Check both main bundle and resources directory
-            let modelNames = ["model", "test_cube", "cube", "sphere"] 
-            var modelURL: URL? = nil
-            
-            // Try different model names
-            for modelName in modelNames {
-                if let url = Bundle.main.url(forResource: modelName, withExtension: "usdz") {
-                    modelURL = url
-                    print("Found model with name: \(modelName)")
-                    break
-                }
-            }
-            
-            // If still nil, check common directories
-            if modelURL == nil {
-                let potentialPaths = [
-                    Bundle.main.bundlePath + "/model.usdz",
-                    Bundle.main.resourceURL?.appendingPathComponent("model.usdz").path ?? "",
-                    Bundle.main.resourceURL?.appendingPathComponent("Resources/model.usdz").path ?? "",
-                    Bundle.main.bundlePath + "/Runner.app/model.usdz"
-                ]
-                
-                for path in potentialPaths {
-                    print("Checking path: \(path)")
-                    if FileManager.default.fileExists(atPath: path) {
-                        modelURL = URL(fileURLWithPath: path)
-                        print("Found model at path: \(path)")
-                        break
-                    }
-                }
-            }
-            
-            // Try creating a small box as fallback USDZ model
-            if modelURL == nil {
-                print("Creating a fallback box model...")
-                let box = SCNBox(width: 0.05, height: 0.05, length: 0.05, chamferRadius: 0.005)
-                box.firstMaterial?.diffuse.contents = UIColor.red
-                geometry = box
-                node = SCNNode(geometry: geometry)
-            }
-            
-            // Log model path for debugging
-            print("Looking for USDZ model at: \(Bundle.main.resourceURL?.path ?? "unknown")/model.usdz")
-            print("Model URL found: \(modelURL?.path ?? "nil")")
-            
-            if let modelURL = modelURL {
-                do {
-                    let scene = try SCNScene(url: modelURL, options: nil)
-                    node = SCNNode()
-                    
-                    // Add all nodes from the USDZ scene
-                    for childNode in scene.rootNode.childNodes {
-                        node.addChildNode(childNode.clone())
-                    }
-                    
-                    // Scale the node
-                    node.scale = SCNVector3(
-                        x: Float(scale[0]) * 0.01,  // Çok daha küçük ölçek (1/100)
-                        y: Float(scale[1]) * 0.01,
-                        z: Float(scale[2]) * 0.01
-                    )
-                    
-                    // Create physics shape
-                    let physicsShape = SCNPhysicsShape(node: node, options: [
-                        SCNPhysicsShape.Option.keepAsCompound: true,
-                        SCNPhysicsShape.Option.scale: SCNVector3(
-                            x: Float(scale[0]) * 0.01,  // Fizik şeklinin ölçeğini de küçült
-                            y: Float(scale[1]) * 0.01,
-                            z: Float(scale[2]) * 0.01
-                        )
-                    ])
-                    
-                    // Create physics body
-                    node.physicsBody = SCNPhysicsBody(type: .dynamic, shape: physicsShape)
-                    node.physicsBody?.mass = CGFloat(mass)
-                    node.physicsBody?.friction = defaultFriction
-                    node.physicsBody?.restitution = defaultRestitution
-                    node.physicsBody?.categoryBitMask = 2
-                    node.physicsBody?.collisionBitMask = 1
-                    node.physicsBody?.contactTestBitMask = 1
-                    
-                    // Set position
-                    node.position = SCNVector3(
-                        x: Float(position[0]),
-                        y: Float(position[1]),
-                        z: Float(position[2])
-                    )
-                    
-                    // Set rendering order for occlusion
-                    node.renderingOrder = 1000
-                    
-                    // Add to scene
-                    physicsObjects[id] = node
-                    arView.scene.rootNode.addChildNode(node)
-                    
-                    return true
-                } catch {
-                    print("Failed to load USDZ model: \(error)")
-                    // Fall back to sphere if model loading fails
-                    geometry = SCNSphere(radius: CGFloat(scale[0]))
-                    node = SCNNode(geometry: geometry)
-                }
-            } else {
-                print("USDZ model file not found. Searched in bundle and Resources directory")
-                // Fall back to sphere if model is not found
-                geometry = SCNSphere(radius: CGFloat(scale[0]))
-                node = SCNNode(geometry: geometry)
-            }
         default:
             geometry = SCNSphere(radius: CGFloat(scale[0]))
             node = SCNNode(geometry: geometry)
