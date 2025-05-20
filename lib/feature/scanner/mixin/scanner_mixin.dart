@@ -57,23 +57,12 @@ mixin ScannerMixin on State<ScannerView> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            result.isSuccess
-                ? 'Exported to: ${result.filePath}'
-                : 'Export failed',
-          ),
-        ),
+      showSnackBar(
+        result.isSuccess ? 'Exported to: ${result.filePath}' : 'Export failed',
       );
     } on Exception catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Export failed: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      showSnackBar('Export failed: $e');
     }
   }
 
@@ -115,6 +104,14 @@ mixin ScannerMixin on State<ScannerView> {
           ],
         );
       },
+    );
+  }
+
+  void showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+      ),
     );
   }
 }
