@@ -22,7 +22,6 @@ final class ScannerCubit extends Cubit<ScannerState> {
   }) async {
     await _service.startScanning(quality: scanQuality);
     emit(state.copyWith(isScanning: true));
-    await _monitorScanningProgress();
   }
 
   Future<void> stopScanning() async {
@@ -30,36 +29,10 @@ final class ScannerCubit extends Cubit<ScannerState> {
     await _service.stopScanning();
   }
 
-  Future<void> _monitorScanningProgress() async {
-    while (state.isScanning) {
-      await getScanProgress();
-      await Future<void>.delayed(const Duration(milliseconds: 500));
-    }
-  }
-
-  Future<void> getScanProgress() async {
-    final progress = await _service.getScanProgress();
-    emit(state.copyWith(
-      scanProgress: progress.progress,
-      isComplete: progress.isComplete,
-      missingAreas: progress.missingAreas,
-    ));
-  }
-
   Future<ExportResult> exportModel({
     required ExportFormat format,
     required String fileName,
   }) async {
     return _service.exportModel(format: format, fileName: fileName);
-  }
-
-  /// Exports the current scan to a temporary file for immediate use in physics mode
-  Future<String> exportForPhysicsMode() async {
-    final result = await _service.exportModel(
-      format: ExportFormat.obj,
-      fileName: 'temp_physics_scan_${DateTime.now().millisecondsSinceEpoch}',
-    );
-
-    return result.filePath;
   }
 }

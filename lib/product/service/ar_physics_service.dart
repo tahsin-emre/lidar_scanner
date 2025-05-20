@@ -3,10 +3,8 @@ import 'package:injectable/injectable.dart';
 import 'package:lidar_scanner/product/model/physics_object.dart';
 import 'package:logging/logging.dart';
 
-/// AR Fizik modülü ile iletişim kurmak için servis sınıfı
 @singleton
 class ARPhysicsService {
-  /// Yeni bir AR Fizik servisi oluştur
   ARPhysicsService() {
     _logger = Logger('ARPhysicsService');
   }
@@ -14,24 +12,20 @@ class ARPhysicsService {
   late final Logger _logger;
   int _viewId = -1;
 
-  /// Method channel'ın adını belirli bir viewId için oluşturur
   String _getChannelName(int viewId) {
     return 'com.example.lidarScanner/arPhysics_$viewId';
   }
 
-  /// Mevcut yada belirtilen viewId için method channel oluşturur
   MethodChannel _getMethodChannel([int? viewId]) {
     final id = viewId ?? _viewId;
     return MethodChannel(_getChannelName(id));
   }
 
-  /// ViewId'yi ayarla
   void setViewId(int id) {
     _logger.info('Setting AR Physics viewId to $id');
     _viewId = id;
   }
 
-  /// Ekran koordinatlarını dünya koordinatlarına dönüştür
   Future<List<double>?> screenToWorldPosition(double x, double y) async {
     if (_viewId < 0) {
       _logger.warning('AR View not initialized, cannot convert position');
@@ -59,16 +53,12 @@ class ARPhysicsService {
       return null;
     } on PlatformException catch (e) {
       _logger
-          .warning('Error converting screen to world position: ${e.message}');
-      _logger.warning('Error details: ${e.details}');
-      return null;
-    } catch (e) {
-      _logger.warning('Unexpected error during position conversion: $e');
+        ..warning('Error converting screen to world position: ${e.message}')
+        ..warning('Error details: ${e.details}');
       return null;
     }
   }
 
-  /// AR sahnesi'ne fizik objesi ekle
   Future<bool> addPhysicsObject(PhysicsObject object) async {
     if (_viewId < 0) {
       _logger.warning('AR View not initialized, cannot add object');
@@ -76,8 +66,9 @@ class ARPhysicsService {
     }
 
     try {
-      _logger.info('Adding object ${object.id} to AR view $_viewId');
-      _logger.info('Object data: ${object.toMap()}');
+      _logger
+        ..info('Adding object ${object.id} to AR view $_viewId')
+        ..info('Object data: ${object.toMap()}');
 
       final channel = _getMethodChannel();
 
@@ -89,16 +80,13 @@ class ARPhysicsService {
       _logger.info('Object added successfully: ${result ?? false}');
       return result ?? false;
     } on PlatformException catch (e) {
-      _logger.warning('Error adding physics object: ${e.message}');
-      _logger.warning('Error details: ${e.details}');
-      return false;
-    } catch (e) {
-      _logger.warning('Unexpected error adding object: $e');
+      _logger
+        ..warning('Error adding physics object: ${e.message}')
+        ..warning('Error details: ${e.details}');
       return false;
     }
   }
 
-  /// Belli bir objeyi AR sahnesinden kaldır
   Future<bool> removePhysicsObject(String objectId) async {
     if (_viewId < 0) {
       _logger.warning('AR View not initialized, cannot remove object');
@@ -122,7 +110,6 @@ class ARPhysicsService {
     }
   }
 
-  /// Tüm objeleri AR sahnesinden temizle
   Future<bool> clearObjects() async {
     if (_viewId < 0) {
       _logger.warning('AR View not initialized, cannot clear objects');
@@ -145,7 +132,6 @@ class ARPhysicsService {
     }
   }
 
-  /// Fizik simülasyonu FPS değerini al
   Future<double> getFps() async {
     if (_viewId < 0) return 0.0;
 

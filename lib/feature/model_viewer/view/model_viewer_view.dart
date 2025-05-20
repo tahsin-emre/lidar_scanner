@@ -165,7 +165,6 @@ class _ModelViewerState extends State<ModelViewerView>
                       _startRotation();
                     }
                   },
-                  interactive: true,
                 ),
                 // Help text overlay
                 Positioned(

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:lidar_scanner/feature/ar_physics/view/ar_physics_view.dart';
 import 'package:lidar_scanner/feature/home/mixin/home_mixin.dart';
 import 'package:lidar_scanner/feature/saved_scans/view/saved_scans_view.dart';
 import 'package:lidar_scanner/product/utils/extensions/widget_ext.dart';
@@ -26,10 +25,19 @@ class _HomeViewState extends State<HomeView> with HomeMixin {
           _Header(hasLidar: hasLidar, deviceInfo: deviceInfo).sliver(),
 
           // Main scan button
-          _StartScanButton(
-            icon: Icons.view_in_ar_rounded,
-            label: 'Start New Scan',
-            onTap: pushToScanner,
+          Row(
+            children: [
+              _StartScanButton(
+                icon: Icons.view_in_ar_rounded,
+                label: 'Start New Scan',
+                onTap: pushToScanner,
+              ).expanded(),
+              _StartScanButton(
+                icon: Icons.smart_toy_outlined,
+                label: 'AR Physics Mode',
+                onTap: pushToARPhysics,
+              ).expanded(),
+            ],
           ).sliver(),
 
           const SizedBox(height: 24).sliver(),
@@ -44,19 +52,6 @@ class _HomeViewState extends State<HomeView> with HomeMixin {
           ).sliver(),
 
           const SizedBox(height: 16).sliver(),
-
-          // AR Physics button - tamamen bağımsız modül
-          _FeatureButton(
-            icon: Icons.view_in_ar,
-            label: 'AR Fizik Modu',
-            onTap: () {
-              ARPhysicsView(
-                onClose: () => Navigator.pop(context),
-              ).push(context);
-            },
-          ).sliver(),
-
-          const SizedBox(height: 32).sliver(),
         ],
       ),
     );
@@ -136,13 +131,17 @@ final class _FeatureButton extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon),
+            Icon(
+              icon,
+              color: Colors.white,
+            ),
             const SizedBox(width: 12),
             Text(
               label,
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
+                color: Colors.white,
               ),
             ),
           ],

@@ -4,6 +4,8 @@ final class _Header extends StatelessWidget {
   const _Header({required this.hasLidar, required this.deviceInfo});
   final bool hasLidar;
   final String deviceInfo;
+  static const _text =
+      'Create detailed 3D models of real-world environments with precision scanning';
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -24,7 +26,7 @@ final class _Header extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32),
           child: Text(
-            'Create detailed 3D models of real-world environments with precision scanning',
+            _text,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   color: Colors.grey[600],
                 ),

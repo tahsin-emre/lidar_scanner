@@ -1,5 +1,1 @@
-enum ExportFormat {
-  usdz,
-  obj,
-  gltf,
-}
+enum ExportFormat { obj }
