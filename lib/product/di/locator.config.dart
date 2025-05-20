@@ -12,11 +12,10 @@
 import 'package:get_it/get_it.dart' as _i174;
 import 'package:injectable/injectable.dart' as _i526;
 
+import '../../feature/ar_physics/cubit/ar_physics_cubit.dart' as _i392;
 import '../../feature/scanner/cubit/scanner_cubit.dart' as _i556;
+import '../service/ar_physics_service.dart' as _i77;
 import '../service/scanner_service.dart' as _i634;
-import 'package:lidar_scanner/feature/interactive_physics/cubit/interactive_physics_cubit.dart'
-    as _i4;
-import 'package:lidar_scanner/product/service/physics_service.dart' as _i5;
 
 extension GetItInjectableX on _i174.GetIt {
 // initializes the registration of main-scope dependencies inside of GetIt
@@ -30,11 +29,11 @@ extension GetItInjectableX on _i174.GetIt {
       environmentFilter,
     );
     gh.singleton<_i634.ScannerService>(() => _i634.ScannerService());
-    gh.singleton<_i5.PhysicsService>(() => _i5.PhysicsService());
+    gh.singleton<_i77.ARPhysicsService>(() => _i77.ARPhysicsService());
+    gh.factory<_i392.ARPhysicsCubit>(
+        () => _i392.ARPhysicsCubit(gh<_i77.ARPhysicsService>()));
     gh.factory<_i556.ScannerCubit>(
         () => _i556.ScannerCubit(gh<_i634.ScannerService>()));
-    gh.factory<_i4.InteractivePhysicsCubit>(
-        () => _i4.InteractivePhysicsCubit(gh<_i5.PhysicsService>()));
     return this;
   }
 }

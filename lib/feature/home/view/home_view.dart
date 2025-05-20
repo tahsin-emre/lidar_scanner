@@ -25,10 +25,19 @@ class _HomeViewState extends State<HomeView> with HomeMixin {
           _Header(hasLidar: hasLidar, deviceInfo: deviceInfo).sliver(),
 
           // Main scan button
-          _StartScanButton(
-            icon: Icons.view_in_ar_rounded,
-            label: 'Start New Scan',
-            onTap: pushToScanner,
+          Row(
+            children: [
+              _StartScanButton(
+                icon: Icons.view_in_ar_rounded,
+                label: 'Start New Scan',
+                onTap: pushToScanner,
+              ).expanded(),
+              _StartScanButton(
+                icon: Icons.smart_toy_outlined,
+                label: 'AR Physics Mode',
+                onTap: pushToARPhysics,
+              ).expanded(),
+            ],
           ).sliver(),
 
           const SizedBox(height: 24).sliver(),
@@ -42,7 +51,7 @@ class _HomeViewState extends State<HomeView> with HomeMixin {
             },
           ).sliver(),
 
-          const SizedBox(height: 32).sliver(),
+          const SizedBox(height: 16).sliver(),
         ],
       ),
     );
@@ -122,13 +131,17 @@ final class _FeatureButton extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon),
+            Icon(
+              icon,
+              color: Colors.white,
+            ),
             const SizedBox(width: 12),
             Text(
               label,
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
+                color: Colors.white,
               ),
             ),
           ],
