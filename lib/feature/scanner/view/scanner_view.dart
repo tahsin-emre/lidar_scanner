@@ -73,9 +73,7 @@ class _ScannerViewState extends State<ScannerView> with ScannerMixin {
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  if (state.canScan &&
-                      !state.isScanning &&
-                      state.scanProgress > 0) ...[
+                  if (state.canScan && !state.isScanning) ...[
                     FloatingActionButton(
                       onPressed: () => exportModel(context),
                       child: const Icon(Icons.save_alt),
