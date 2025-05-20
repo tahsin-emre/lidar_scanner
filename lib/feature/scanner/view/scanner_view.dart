@@ -77,13 +77,12 @@ class _ScannerViewState extends State<ScannerView> with ScannerMixin {
       child: BlocBuilder<ScannerCubit, ScannerState>(
         bloc: scannerCubit,
         builder: (context, state) {
-          final scanningComplete =
-              state.canScan && !state.isScanning && state.scanProgress > 0;
-
           return Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (scanningComplete) ...[
+              if (state.canScan &&
+                  !state.isScanning &&
+                  state.scanProgress > 0) ...[
                 Padding(
                   padding: const EdgeInsets.only(bottom: 16),
                   child: ElevatedButton.icon(
@@ -102,7 +101,9 @@ class _ScannerViewState extends State<ScannerView> with ScannerMixin {
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  if (scanningComplete) ...[
+                  if (state.canScan &&
+                      !state.isScanning &&
+                      state.scanProgress > 0) ...[
                     FloatingActionButton(
                       heroTag: 'export_fab',
                       onPressed: () => _exportModel(context),

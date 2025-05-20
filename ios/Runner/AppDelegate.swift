@@ -59,6 +59,11 @@ import ARKit // Import ARKit
     let physicsFactory = PhysicsViewFactory(messenger: controller.binaryMessenger)
     print("Registering Physics View Factory")
     self.registrar(forPlugin: "com.example.lidarScanner.PhysicsViewPlugin")!.register(physicsFactory, withId: "com.example.lidarScanner/physicsView")
+    
+    // Register the AR Physics View Factory
+    let arPhysicsFactory = ARPhysicsViewFactory(messenger: controller.binaryMessenger)
+    print("Registering AR Physics View Factory")
+    self.registrar(forPlugin: "com.example.lidarScanner.ARPhysicsViewPlugin")!.register(arPhysicsFactory, withId: "com.example.lidarScanner/arPhysicsView")
 
     GeneratedPluginRegistrant.register(with: self)
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)

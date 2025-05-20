@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lidar_scanner/feature/ar_physics/view/ar_physics_view.dart';
 import 'package:lidar_scanner/feature/home/mixin/home_mixin.dart';
 import 'package:lidar_scanner/feature/saved_scans/view/saved_scans_view.dart';
 import 'package:lidar_scanner/product/utils/extensions/widget_ext.dart';
@@ -39,6 +40,19 @@ class _HomeViewState extends State<HomeView> with HomeMixin {
             label: 'View Scan Library',
             onTap: () {
               const SavedScansView().push(context);
+            },
+          ).sliver(),
+
+          const SizedBox(height: 16).sliver(),
+
+          // AR Physics button - tamamen bağımsız modül
+          _FeatureButton(
+            icon: Icons.view_in_ar,
+            label: 'AR Fizik Modu',
+            onTap: () {
+              ARPhysicsView(
+                onClose: () => Navigator.pop(context),
+              ).push(context);
             },
           ).sliver(),
 

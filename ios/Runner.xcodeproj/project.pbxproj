@@ -23,6 +23,7 @@
 		DECB2A0D2DD1FEDF00366C80 /* MeshProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = DECB2A092DD1FEDF00366C80 /* MeshProcessor.swift */; };
 		DECB2A0E2DD1FEDF00366C80 /* ScannerConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = DECB2A0B2DD1FEDF00366C80 /* ScannerConfiguration.swift */; };
 		DECB2A0F2DD1FEDF00366C80 /* ModelExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = DECB2A0A2DD1FEDF00366C80 /* ModelExporter.swift */; };
+		DED731DE2DDCDDC800382598 /* ARPhysicsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DED731DD2DDCDDC800382598 /* ARPhysicsView.swift */; };
 		DEEBA42A2DB0EFC1007EE22F /* ARKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DEEBA4292DB0EFC1007EE22F /* ARKit.framework */; };
 		DEEBA42D2DB0EFFD007EE22F /* ScannerViewFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEEBA42B2DB0EFFD007EE22F /* ScannerViewFactory.swift */; };
 		DEEBA42E2DB0EFFD007EE22F /* ScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEEBA42C2DB0EFFD007EE22F /* ScannerView.swift */; };
@@ -82,6 +83,7 @@
 		DECB2A092DD1FEDF00366C80 /* MeshProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeshProcessor.swift; sourceTree = "<group>"; };
 		DECB2A0A2DD1FEDF00366C80 /* ModelExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelExporter.swift; sourceTree = "<group>"; };
 		DECB2A0B2DD1FEDF00366C80 /* ScannerConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScannerConfiguration.swift; sourceTree = "<group>"; };
+		DED731DD2DDCDDC800382598 /* ARPhysicsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ARPhysicsView.swift; sourceTree = "<group>"; };
 		DEEBA4292DB0EFC1007EE22F /* ARKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ARKit.framework; path = System/Library/Frameworks/ARKit.framework; sourceTree = SDKROOT; };
 		DEEBA42B2DB0EFFD007EE22F /* ScannerViewFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScannerViewFactory.swift; sourceTree = "<group>"; };
 		DEEBA42C2DB0EFFD007EE22F /* ScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScannerView.swift; sourceTree = "<group>"; };
@@ -168,6 +170,7 @@
 		97C146F01CF9000F007C117D /* Runner */ = {
 			isa = PBXGroup;
 			children = (
+				DED731DD2DDCDDC800382598 /* ARPhysicsView.swift */,
 				7932A6B52DD2190C00CAA8FE /* PhysicsView.swift */,
 				7932A6B62DD2190C00CAA8FE /* PhysicsViewFactory.swift */,
 				DECB2A082DD1FEDF00366C80 /* ARExtensions.swift */,
@@ -438,6 +441,7 @@
 				DECB2A0D2DD1FEDF00366C80 /* MeshProcessor.swift in Sources */,
 				DECB2A0E2DD1FEDF00366C80 /* ScannerConfiguration.swift in Sources */,
 				7932A6B72DD2190C00CAA8FE /* PhysicsViewFactory.swift in Sources */,
+				DED731DE2DDCDDC800382598 /* ARPhysicsView.swift in Sources */,
 				7932A6B82DD2190C00CAA8FE /* PhysicsView.swift in Sources */,
 				DECB2A0F2DD1FEDF00366C80 /* ModelExporter.swift in Sources */,
 			);
