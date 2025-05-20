@@ -12,7 +12,6 @@
 		3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */; };
 		7014ECD12008259B66FA12B7 /* Pods_RunnerTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 06FB728FB64746A5577B1E70 /* Pods_RunnerTests.framework */; };
 		74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC5600515810 /* AppDelegate.swift */; };
-		792DDD362DD62C1100683153 /* model.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 792DDD352DD62C1100683153 /* model.usdz */; };
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
@@ -22,6 +21,11 @@
 		DECB2A0E2DD1FEDF00366C80 /* ScannerConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = DECB2A0B2DD1FEDF00366C80 /* ScannerConfiguration.swift */; };
 		DECB2A0F2DD1FEDF00366C80 /* ModelExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = DECB2A0A2DD1FEDF00366C80 /* ModelExporter.swift */; };
 		DED731DE2DDCDDC800382598 /* ARPhysicsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DED731DD2DDCDDC800382598 /* ARPhysicsView.swift */; };
+		DED731E52DDD07DB00382598 /* ARMethodChannelHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = DED731E02DDD07DB00382598 /* ARMethodChannelHandler.swift */; };
+		DED731E62DDD07DB00382598 /* ARPhysicsObjectManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DED731E12DDD07DB00382598 /* ARPhysicsObjectManager.swift */; };
+		DED731E72DDD07DB00382598 /* ARSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DED731E42DDD07DB00382598 /* ARSessionManager.swift */; };
+		DED731E82DDD07DB00382598 /* ARPhysicsViewFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = DED731E22DDD07DB00382598 /* ARPhysicsViewFactory.swift */; };
+		DED731EA2DDD07DB00382598 /* ARCollisionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DED731DF2DDD07DB00382598 /* ARCollisionManager.swift */; };
 		DEEBA42A2DB0EFC1007EE22F /* ARKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DEEBA4292DB0EFC1007EE22F /* ARKit.framework */; };
 		DEEBA42D2DB0EFFD007EE22F /* ScannerViewFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEEBA42B2DB0EFFD007EE22F /* ScannerViewFactory.swift */; };
 		DEEBA42E2DB0EFFD007EE22F /* ScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEEBA42C2DB0EFFD007EE22F /* ScannerView.swift */; };
@@ -63,7 +67,6 @@
 		3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = AppFrameworkInfo.plist; path = Flutter/AppFrameworkInfo.plist; sourceTree = "<group>"; };
 		74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Runner-Bridging-Header.h"; sourceTree = "<group>"; };
 		74858FAE1ED2DC5600515810 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		792DDD352DD62C1100683153 /* model.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = model.usdz; sourceTree = "<group>"; };
 		7AFA3C8E1D35360C0083082E /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Release.xcconfig; path = Flutter/Release.xcconfig; sourceTree = "<group>"; };
 		7EEBC095DB3B16443F7E4249 /* Pods-RunnerTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.debug.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.debug.xcconfig"; sourceTree = "<group>"; };
 		8463DF61C97136776E013067 /* Pods-RunnerTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.release.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.release.xcconfig"; sourceTree = "<group>"; };
@@ -80,6 +83,11 @@
 		DECB2A0A2DD1FEDF00366C80 /* ModelExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelExporter.swift; sourceTree = "<group>"; };
 		DECB2A0B2DD1FEDF00366C80 /* ScannerConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScannerConfiguration.swift; sourceTree = "<group>"; };
 		DED731DD2DDCDDC800382598 /* ARPhysicsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ARPhysicsView.swift; sourceTree = "<group>"; };
+		DED731DF2DDD07DB00382598 /* ARCollisionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ARCollisionManager.swift; sourceTree = "<group>"; };
+		DED731E02DDD07DB00382598 /* ARMethodChannelHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ARMethodChannelHandler.swift; sourceTree = "<group>"; };
+		DED731E12DDD07DB00382598 /* ARPhysicsObjectManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ARPhysicsObjectManager.swift; sourceTree = "<group>"; };
+		DED731E22DDD07DB00382598 /* ARPhysicsViewFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ARPhysicsViewFactory.swift; sourceTree = "<group>"; };
+		DED731E42DDD07DB00382598 /* ARSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ARSessionManager.swift; sourceTree = "<group>"; };
 		DEEBA4292DB0EFC1007EE22F /* ARKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ARKit.framework; path = System/Library/Frameworks/ARKit.framework; sourceTree = SDKROOT; };
 		DEEBA42B2DB0EFFD007EE22F /* ScannerViewFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScannerViewFactory.swift; sourceTree = "<group>"; };
 		DEEBA42C2DB0EFFD007EE22F /* ScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScannerView.swift; sourceTree = "<group>"; };
@@ -144,7 +152,6 @@
 		97C146E51CF9000F007C117D = {
 			isa = PBXGroup;
 			children = (
-				792DDD352DD62C1100683153 /* model.usdz */,
 				9740EEB11CF90186004384FC /* Flutter */,
 				97C146F01CF9000F007C117D /* Runner */,
 				97C146EF1CF9000F007C117D /* Products */,
@@ -166,6 +173,11 @@
 		97C146F01CF9000F007C117D /* Runner */ = {
 			isa = PBXGroup;
 			children = (
+				DED731DF2DDD07DB00382598 /* ARCollisionManager.swift */,
+				DED731E02DDD07DB00382598 /* ARMethodChannelHandler.swift */,
+				DED731E12DDD07DB00382598 /* ARPhysicsObjectManager.swift */,
+				DED731E22DDD07DB00382598 /* ARPhysicsViewFactory.swift */,
+				DED731E42DDD07DB00382598 /* ARSessionManager.swift */,
 				DED731DD2DDCDDC800382598 /* ARPhysicsView.swift */,
 				DECB2A082DD1FEDF00366C80 /* ARExtensions.swift */,
 				DECB2A092DD1FEDF00366C80 /* MeshProcessor.swift */,
@@ -294,7 +306,6 @@
 			files = (
 				97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */,
 				3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */,
-				792DDD362DD62C1100683153 /* model.usdz in Resources */,
 				97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */,
 				97C146FC1CF9000F007C117D /* Main.storyboard in Resources */,
 			);
@@ -428,6 +439,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				DEEBA42D2DB0EFFD007EE22F /* ScannerViewFactory.swift in Sources */,
+				DED731E52DDD07DB00382598 /* ARMethodChannelHandler.swift in Sources */,
+				DED731E62DDD07DB00382598 /* ARPhysicsObjectManager.swift in Sources */,
+				DED731E72DDD07DB00382598 /* ARSessionManager.swift in Sources */,
+				DED731E82DDD07DB00382598 /* ARPhysicsViewFactory.swift in Sources */,
+				DED731EA2DDD07DB00382598 /* ARCollisionManager.swift in Sources */,
 				DEEBA42E2DB0EFFD007EE22F /* ScannerView.swift in Sources */,
 				74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */,
 				1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */,
