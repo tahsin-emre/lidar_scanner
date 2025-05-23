@@ -2,23 +2,17 @@ import SceneKit
 import ARKit
 import UIKit
 
-/// AR Fiziksel Objelerin Yönetimi
 class ARPhysicsObjectManager {
-    // MARK: - Properties
     private var arView: ARSCNView
     private var physicsObjects = [String: SCNNode]()
     
     private var defaultFriction: CGFloat = 0.5
     private var defaultRestitution: CGFloat = 0.4
     
-    // MARK: - Initialization
     init(arView: ARSCNView) {
         self.arView = arView
     }
     
-    // MARK: - Public Methods
-    
-    /// Tüm fiziksel objeleri temizler
     func clearAllObjects() {
         for (_, node) in physicsObjects {
             node.removeFromParentNode()
@@ -26,7 +20,6 @@ class ARPhysicsObjectManager {
         physicsObjects.removeAll()
     }
     
-    /// Belirli bir ID'ye sahip fiziksel objeyi kaldırır
     func removePhysicsObject(id: String) -> Bool {
         if let node = physicsObjects[id] {
             node.removeFromParentNode()
@@ -37,7 +30,6 @@ class ARPhysicsObjectManager {
         }
     }
     
-    /// Fizik parametrelerini ayarlar
     func setPhysicsParameters(gravity: Double? = nil, friction: Double? = nil, restitution: Double? = nil) {
         if let gravity = gravity {
             arView.scene.physicsWorld.gravity = SCNVector3(0, Float(gravity), 0)
@@ -52,7 +44,6 @@ class ARPhysicsObjectManager {
         }
     }
     
-    /// Yeni bir fiziksel obje ekler
     func addPhysicsObject(objectData: [String: Any]) -> Bool {
         guard let id = objectData["id"] as? String,
               let type = objectData["type"] as? String,
@@ -69,56 +60,38 @@ class ARPhysicsObjectManager {
         
         print("ARPhysicsObjectManager: Adding \(type) at position \(position)")
         
-        // Convert position to SCNVector3
         let objectPosition = SCNVector3(
             Float(position[0]),
             Float(position[1]),
             Float(position[2])
         )
         
-        // Obje oluşturma fonksiyonunu çağır
         guard let node = createObject(ofType: type, withColor: colorArray) else {
             return false
         }
         
-        // Pozisyonu ayarla
         node.position = objectPosition
-        
-        // Benzersiz isim ata ve kaydı tut
         node.name = id
         physicsObjects[id] = node
+        node.renderingOrder = 100
+        node.castsShadow = true
+        node.categoryBitMask = 2
         
-        // Rendering sırasını ve oklüzyon için derinlik testlerini ayarla
-        node.renderingOrder = 100 // Gerçek dünya nesnelerinden sonra render et (oklüzyon için)
-        
-        // Derinlik testi ayarları
-        node.castsShadow = true // Gölge oluştur
-        node.categoryBitMask = 2 // Fizik kategorisiyle aynı
-        
-        // Daha iyi oklüzyon için her objenin malzemelerini ayarla
         for material in node.geometry?.materials ?? [] {
-            // Objelerin derinlik tamponu ile doğru etkileşimi
             material.readsFromDepthBuffer = true
             material.writesToDepthBuffer = true
             
-            // Işık etkileşimi
             if material.lightingModel != .physicallyBased {
                 material.lightingModel = .blinn
             }
             
-            // Daha net oklüzyon sınırları
             material.transparencyMode = .default
         }
         
-        // Sahneye ekle
         arView.scene.rootNode.addChildNode(node)
-        
         return true
     }
     
-    // MARK: - Private Methods
-    
-    /// İstenen tipte obje oluşturur
     private func createObject(ofType type: String, withColor colorArray: [Int]) -> SCNNode? {
         var geometry: SCNGeometry
         var node: SCNNode
@@ -128,7 +101,6 @@ class ARPhysicsObjectManager {
             geometry = SCNSphere(radius: 0.05)
             node = SCNNode(geometry: geometry)
             
-            // Özel materyal oluştur
             let material = SCNMaterial()
             material.diffuse.contents = UIColor(
                 red: CGFloat(colorArray[0]) / 255.0,
@@ -141,20 +113,19 @@ class ARPhysicsObjectManager {
             material.shininess = 0.5
             geometry.materials = [material]
             
-            // Fizik özelliklerini ayarla - gerçek dünya ile etkileşim için
             node.physicsBody = SCNPhysicsBody(
                 type: .dynamic,
                 shape: SCNPhysicsShape(
                     geometry: geometry,
                     options: [
-                        SCNPhysicsShape.Option.collisionMargin: 0.005, // Daha küçük çarpışma marjı
-                        SCNPhysicsShape.Option.keepAsCompound: true // Kararlılık için
+                        SCNPhysicsShape.Option.collisionMargin: 0.005,
+                        SCNPhysicsShape.Option.keepAsCompound: true
                     ]
                 )
             )
             
-            node.physicsBody?.mass = 1.0
-            node.physicsBody?.restitution = 0.7 // Biraz daha az zıplama
+            node.physicsBody?.mass = 0.5
+            node.physicsBody?.restitution = 0.9 // Yüksek zıplama değeri
             node.physicsBody?.friction = 0.5 // Daha fazla sürtünme
             node.physicsBody?.rollingFriction = 0.3 // Daha fazla yuvarlanma direnci
             
@@ -207,7 +178,7 @@ class ARPhysicsObjectManager {
             )
             
             node.physicsBody?.mass = 2.0 // Küreden daha ağır
-            node.physicsBody?.restitution = 0.4 // Orta zıplama katsayısı
+            node.physicsBody?.restitution = 0.1 // Çok düşük zıplama katsayısı
             node.physicsBody?.friction = 0.8 // Yüksek sürtünme
             node.physicsBody?.rollingFriction = 0.5 // Yuvarlanma direnci yüksek
             
@@ -258,7 +229,7 @@ class ARPhysicsObjectManager {
             )
             
             node.physicsBody?.mass = 1.5 // Küreden biraz daha ağır
-            node.physicsBody?.restitution = 0.5 // Orta zıplama katsayısı
+            node.physicsBody?.restitution = 0.1 // Çok düşük zıplama katsayısı
             node.physicsBody?.friction = 0.6 // Orta sürtünme
             node.physicsBody?.rollingFriction = 0.3 // Orta seviye yuvarlanma direnci
             
@@ -322,7 +293,7 @@ class ARPhysicsObjectManager {
             )
             
             node.physicsBody?.mass = 0.2 // Daha hafif
-            node.physicsBody?.restitution = 0.1 // Çok az zıplama - daha hızlı yerleşmesi için
+            node.physicsBody?.restitution = 0.05 // Neredeyse hiç zıplama olmasın
             node.physicsBody?.friction = 0.8 // Çok fazla sürtünme - sabit durması için
             node.physicsBody?.rollingFriction = 0.8 // Çok fazla yuvarlanma direnci
             
