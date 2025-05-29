@@ -21,8 +21,6 @@ class ScannerView: NSObject, FlutterPlatformView, ARSCNViewDelegate, ARSessionDe
     private let modelExporter: ModelExporter
     private let scannerConfiguration: ScannerConfiguration
     
-    // MARK: - Initialization
-    
     /// ScannerView'ı başlatır ve ARSCNView'ı yapılandırır
     init(
         frame: CGRect,
